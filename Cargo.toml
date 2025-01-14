@@ -1,0 +1,12 @@
+[package]
+name = "cal3d"
+version = "0.1.0"
+edition = "2021"
+
+[[bin]]
+name = "cally"
+path = "src/tools/cally/main.rs"
+
+[dependencies]
+clap = { version = "4.5.26", features = ["derive"] }
+image = "0.25.5"
