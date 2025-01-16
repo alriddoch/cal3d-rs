@@ -1,9 +1,12 @@
 use clap::Parser;
 
-use super::model::Model;
 use super::menu::theMenu;
+use super::model::Model;
 
-use std::{default, path::{Path, PathBuf}};
+use std::{
+    default,
+    path::{Path, PathBuf},
+};
 
 #[derive(Debug)]
 pub struct DemoError;
@@ -58,12 +61,10 @@ pub struct Demo {
 }
 
 fn loadTexture(filename: &str) -> Result<u32> {
-  // TODO: Copy from elsewhere
-  // image::open(&Path::new(filename))
-  Ok(1)
+    // TODO: Copy from elsewhere
+    // image::open(&Path::new(filename))
+    Ok(1)
 }
-
-
 
 impl Demo {
     pub fn new() -> Self {
@@ -98,86 +99,106 @@ o----------------------------------------------------------------o"
     }
 
     pub fn OnInit(&mut self) -> Result<()> {
-  // load the cursor texture
-  let strFilename = [self.strDatapath.as_str(), "cursor.raw"].iter().collect::<PathBuf>();
-  let strFilename = strFilename.to_str().ok_or(DemoError{})?;
+        // load the cursor texture
+        let strFilename = [self.strDatapath.as_str(), "cursor.raw"]
+            .iter()
+            .collect::<PathBuf>();
+        let strFilename = strFilename.to_str().ok_or(DemoError {})?;
 
-  self.cursorTextureId = loadTexture(strFilename)?;
+        self.cursorTextureId = loadTexture(strFilename)?;
 
-  // load the logo texture
-  let strFilename = [self.strDatapath.as_str(), "logo.raw"].iter().collect::<PathBuf>();
-  let strFilename = strFilename.to_str().ok_or(DemoError{})?;
+        // load the logo texture
+        let strFilename = [self.strDatapath.as_str(), "logo.raw"]
+            .iter()
+            .collect::<PathBuf>();
+        let strFilename = strFilename.to_str().ok_or(DemoError {})?;
 
-  self.logoTextureId = loadTexture(strFilename)?;
+        self.logoTextureId = loadTexture(strFilename)?;
 
-  // load the fps texture
-  let strFilename = [self.strDatapath.as_str(), "fps.raw"].iter().collect::<PathBuf>();
-  let strFilename = strFilename.to_str().ok_or(DemoError{})?;
+        // load the fps texture
+        let strFilename = [self.strDatapath.as_str(), "fps.raw"]
+            .iter()
+            .collect::<PathBuf>();
+        let strFilename = strFilename.to_str().ok_or(DemoError {})?;
 
-  self.fpsTextureId = loadTexture(strFilename)?;
+        self.fpsTextureId = loadTexture(strFilename)?;
 
-  // initialize models
-  println!("Loading 'cally' model ...");
+        // initialize models
+        println!("Loading 'cally' model ...");
 
-  let path = match self.strCal3D_Datapath.as_str() {
-    "" => PathBuf::new(),
-    _ => [self.strCal3D_Datapath.as_str(), "cally"].iter().collect::<PathBuf>(),
-  };
+        let path = match self.strCal3D_Datapath.as_str() {
+            "" => PathBuf::new(),
+            _ => [self.strCal3D_Datapath.as_str(), "cally"]
+                .iter()
+                .collect::<PathBuf>(),
+        };
 
-  let mut pModel = Model::new(path);
+        let mut pModel = Model::new(path);
 
-  let cally_path = [self.strDatapath.as_str(), "cally.cfg"].iter().collect::<PathBuf>();
-  let cally_path = cally_path.to_str().ok_or(DemoError{})?;
-  pModel.onInit(cally_path).or(Err(DemoError{}))?;
+        let cally_path = [self.strDatapath.as_str(), "cally.cfg"]
+            .iter()
+            .collect::<PathBuf>();
+        let cally_path = cally_path.to_str().ok_or(DemoError {})?;
+        pModel.onInit(cally_path).or(Err(DemoError {}))?;
 
-  self.vectorModel.push(pModel);
+        self.vectorModel.push(pModel);
 
-  println!("");
+        println!("");
 
-  // load 'skeleton' model
-  println!("Loading 'skeleton' model ...");
+        // load 'skeleton' model
+        println!("Loading 'skeleton' model ...");
 
-  let path = match self.strCal3D_Datapath.as_str() {
-    "" => PathBuf::new(),
-    _ => [self.strCal3D_Datapath.as_str(), "skeleton"].iter().collect::<PathBuf>(),
-  };
+        let path = match self.strCal3D_Datapath.as_str() {
+            "" => PathBuf::new(),
+            _ => [self.strCal3D_Datapath.as_str(), "skeleton"]
+                .iter()
+                .collect::<PathBuf>(),
+        };
 
-  let mut pModel = Model::new(path);
+        let mut pModel = Model::new(path);
 
-  let skeleton_path = [self.strDatapath.as_str(), "skeleton.cfg"].iter().collect::<PathBuf>();
-  let skeleton_path = skeleton_path.to_str().ok_or(DemoError{})?;
-  pModel.onInit(skeleton_path).or(Err(DemoError{}))?;
+        let skeleton_path = [self.strDatapath.as_str(), "skeleton.cfg"]
+            .iter()
+            .collect::<PathBuf>();
+        let skeleton_path = skeleton_path.to_str().ok_or(DemoError {})?;
+        pModel.onInit(skeleton_path).or(Err(DemoError {}))?;
 
-  self.vectorModel.push(pModel);
+        self.vectorModel.push(pModel);
 
-  println!("");
+        println!("");
 
-  // load 'paladin' model
-  println!("Loading 'paladin' model ...");
+        // load 'paladin' model
+        println!("Loading 'paladin' model ...");
 
-  let path = match self.strCal3D_Datapath.as_str() {
-    "" => PathBuf::new(),
-    _ => [self.strCal3D_Datapath.as_str(), "paladin"].iter().collect::<PathBuf>(),
-  };
+        let path = match self.strCal3D_Datapath.as_str() {
+            "" => PathBuf::new(),
+            _ => [self.strCal3D_Datapath.as_str(), "paladin"]
+                .iter()
+                .collect::<PathBuf>(),
+        };
 
-  let mut pModel = Model::new(path);
+        let mut pModel = Model::new(path);
 
-  let paladin_path = [self.strDatapath.as_str(), "paladin.cfg"].iter().collect::<PathBuf>();
-  let paladin_path = paladin_path.to_str().ok_or(DemoError{})?;
-  pModel.onInit(paladin_path).or(Err(DemoError{}))?;
+        let paladin_path = [self.strDatapath.as_str(), "paladin.cfg"]
+            .iter()
+            .collect::<PathBuf>();
+        let paladin_path = paladin_path.to_str().ok_or(DemoError {})?;
+        pModel.onInit(paladin_path).or(Err(DemoError {}))?;
 
-  self.vectorModel.push(pModel);
+        self.vectorModel.push(pModel);
 
-  println!("");
+        println!("");
 
-  // initialize menu
-  theMenu.onInit(self.width, self.height);
+        // initialize menu
+        theMenu.onInit(self.width, self.height);
 
-  // we're done
-  println!("Initialization done.
+        // we're done
+        println!(
+            "Initialization done.
 
 Quit the demo by pressing 'q' or ESC
-");
+"
+        );
 
         Ok(())
     }
