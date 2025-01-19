@@ -26,7 +26,7 @@ pub struct Cli {
     height: Option<u32>,
 
     #[arg(long)]
-    data: String,
+    data: Option<String>,
 
     #[arg(long)]
     bench: bool,
@@ -74,7 +74,7 @@ impl Demo {
             tiltAngle: -70.0,
             twistAngle: -45.0,
             distance: 270.0,
-            strCal3D_Datapath: String::from("./"),
+            strDatapath: String::from("data/"),
             ..Default::default()
         }
     }
@@ -93,6 +93,10 @@ o----------------------------------------------------------------o"
         );
 
         let cli = Cli::parse();
+
+        if cli.data.is_some() {
+            self.strCal3D_Datapath = cli.data.unwrap();
+        }
 
         // }
         Ok(())

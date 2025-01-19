@@ -1,6 +1,8 @@
-mod model;
+pub mod core;
+pub mod model;
 
-use model::*;
+
+pub use model::*;
 
 pub fn footle() {
     println!("Hello, world!");

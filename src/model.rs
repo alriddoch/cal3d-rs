@@ -1,4 +1,5 @@
-struct CalModel {
+#[derive(Default)]
+pub struct CalModel {
     // CalCoreModel          *m_pCoreModel;
     // CalSkeleton           *m_pSkeleton;
     // CalAbstractMixer      *m_pMixer;
