@@ -1,8 +1,12 @@
 use std::path::PathBuf;
 
+const STATE_IDLE: i32 = 0;
+const STATE_FANCY: i32 = 1;
+const STATE_MOTION: i32 = 2;
+
 #[derive(Default)]
 pub struct Model {
-     m_state: i32,
+    m_state: i32,
     calCoreModel: cal3d::core::CalCoreModel,
     calModel: cal3d::CalModel,
     animationId: [i32; 16],
@@ -17,15 +21,121 @@ pub struct Model {
     path: PathBuf,
 }
 
+#[derive(Debug)]
+pub(crate) enum ModelError {
+    IoError(std::io::Error),
+    ScanfError(sscanf::Error),
+    ParseError(std::num::ParseFloatError),
+    CoreError(cal3d::core::CoreError),
+    SyntaxError,
+}
+
+impl From<std::io::Error> for ModelError {
+    fn from(error: std::io::Error) -> Self {
+        ModelError::IoError(error)
+    }
+}
+
+impl From<sscanf::Error> for ModelError {
+    fn from(error: sscanf::Error) -> Self {
+        ModelError::ScanfError(error)
+    }
+}
+
+impl From<std::num::ParseFloatError> for ModelError {
+    fn from(error: std::num::ParseFloatError) -> Self {
+        ModelError::ParseError(error)
+    }
+}
+
+impl From<cal3d::core::CoreError> for ModelError {
+    fn from(error: cal3d::core::CoreError) -> Self {
+        ModelError::CoreError(error)
+    }
+}
+
 impl Model {
     pub fn new(path: PathBuf) -> Self {
-        Model{
+        Model {
+            m_state: STATE_IDLE,
+            motionBlend: [0.6, 0.1, 0.3],
+            renderScale: 1.0,
+            lodLevel: 1.0,
             path,
             ..Default::default()
         }
     }
 
-    pub fn onInit(&mut self, filename: &str) -> Result<(), ()> {
+    fn readFile(
+        &mut self,
+        name: &str,
+        buff_reader: &mut std::io::BufReader<std::fs::File>,
+    ) -> Result<(), ModelError> {
+        use std::io::BufRead;
+
+        let mut line = 0;
+
+        let mut strPath = self.path.clone();
+
+        let mut animationCount = 0;
+
+        loop {
+            line += 1;
+            let mut buff = String::new();
+            buff_reader.read_line(&mut buff)?;
+            println!("{}", buff);
+            if buff.len() == 0 || buff.starts_with('#') {
+                println!("Skipping blank or comment line");
+            }
+
+            let (key, value) = sscanf::scanf!(buff, "{}={}", str, str)?;
+
+            match key {
+                "scale" => {
+                    self.renderScale = value.parse::<f32>()?;
+                }
+                "path" => {
+                    if self.path.eq(&PathBuf::default()) {
+                        strPath = PathBuf::from(value);
+                    }
+                }
+                "skeleton" => {
+                    let mut filename = strPath.clone();
+                    filename.push(value);
+                    self.calCoreModel.loadCoreSkeleton(&filename)?;
+                }
+                "animation" => {
+                    let mut filename = strPath.clone();
+                    filename.push(value);
+                    self.animationId[animationCount] =
+                        self.calCoreModel.loadCoreAnimation(&filename)?;
+                    animationCount += 1;
+                }
+                "mesh" => {
+                    let mut filename = strPath.clone();
+                    filename.push(value);
+                    self.calCoreModel.loadCoreMesh(&filename)?;
+                }
+                "material" => {
+                    let mut filename = strPath.clone();
+                    filename.push(value);
+                    self.calCoreModel.loadCoreMaterial(&filename)?;
+                }
+                _ => {
+                    println!("{name}({line}): Invalid syntax.");
+                    return Err(ModelError::SyntaxError);
+                }
+            }
+        }
+    }
+
+    pub fn onInit(&mut self, filename: &str) -> Result<(), ModelError> {
+        use std::fs;
+        use std::io::BufReader;
+        let mut buff_reader = BufReader::new(fs::File::open(filename)?);
+        self.readFile(filename, &mut buff_reader)?;
+
+        // FIXME: Postprocessing, textures, etc.
         Ok(())
     }
 }

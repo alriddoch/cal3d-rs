@@ -1,7 +1,7 @@
 use clap::Parser;
 
 use super::menu::theMenu;
-use super::model::Model;
+use super::model::*;
 
 use std::{
     default,
@@ -9,7 +9,16 @@ use std::{
 };
 
 #[derive(Debug)]
-pub struct DemoError;
+pub enum DemoError {
+    ModelError(ModelError),
+    PathError,
+}
+
+impl From<ModelError> for DemoError {
+    fn from(error: ModelError) -> Self {
+        DemoError::ModelError(error)
+    }
+}
 
 type Result<T> = std::result::Result<T, DemoError>;
 
@@ -107,7 +116,7 @@ o----------------------------------------------------------------o"
         let strFilename = [self.strDatapath.as_str(), "cursor.raw"]
             .iter()
             .collect::<PathBuf>();
-        let strFilename = strFilename.to_str().ok_or(DemoError {})?;
+        let strFilename = strFilename.to_str().ok_or(DemoError::PathError)?;
 
         self.cursorTextureId = loadTexture(strFilename)?;
 
@@ -115,7 +124,7 @@ o----------------------------------------------------------------o"
         let strFilename = [self.strDatapath.as_str(), "logo.raw"]
             .iter()
             .collect::<PathBuf>();
-        let strFilename = strFilename.to_str().ok_or(DemoError {})?;
+        let strFilename = strFilename.to_str().ok_or(DemoError::PathError)?;
 
         self.logoTextureId = loadTexture(strFilename)?;
 
@@ -123,7 +132,7 @@ o----------------------------------------------------------------o"
         let strFilename = [self.strDatapath.as_str(), "fps.raw"]
             .iter()
             .collect::<PathBuf>();
-        let strFilename = strFilename.to_str().ok_or(DemoError {})?;
+        let strFilename = strFilename.to_str().ok_or(DemoError::PathError)?;
 
         self.fpsTextureId = loadTexture(strFilename)?;
 
@@ -142,8 +151,8 @@ o----------------------------------------------------------------o"
         let cally_path = [self.strDatapath.as_str(), "cally.cfg"]
             .iter()
             .collect::<PathBuf>();
-        let cally_path = cally_path.to_str().ok_or(DemoError {})?;
-        pModel.onInit(cally_path).or(Err(DemoError {}))?;
+        let cally_path = cally_path.to_str().ok_or(DemoError::PathError)?;
+        pModel.onInit(cally_path)?;
 
         self.vectorModel.push(pModel);
 
@@ -164,8 +173,8 @@ o----------------------------------------------------------------o"
         let skeleton_path = [self.strDatapath.as_str(), "skeleton.cfg"]
             .iter()
             .collect::<PathBuf>();
-        let skeleton_path = skeleton_path.to_str().ok_or(DemoError {})?;
-        pModel.onInit(skeleton_path).or(Err(DemoError {}))?;
+        let skeleton_path = skeleton_path.to_str().ok_or(DemoError::PathError)?;
+        pModel.onInit(skeleton_path)?;
 
         self.vectorModel.push(pModel);
 
@@ -186,8 +195,8 @@ o----------------------------------------------------------------o"
         let paladin_path = [self.strDatapath.as_str(), "paladin.cfg"]
             .iter()
             .collect::<PathBuf>();
-        let paladin_path = paladin_path.to_str().ok_or(DemoError {})?;
-        pModel.onInit(paladin_path).or(Err(DemoError {}))?;
+        let paladin_path = paladin_path.to_str().ok_or(DemoError::PathError)?;
+        pModel.onInit(paladin_path)?;
 
         self.vectorModel.push(pModel);
 

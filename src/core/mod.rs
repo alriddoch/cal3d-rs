@@ -1,2 +1,3 @@
-#[derive(Default)]
-pub struct CalCoreModel {}
+mod model;
+
+pub use model::*;
