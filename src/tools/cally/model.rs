@@ -54,6 +54,14 @@ impl From<cal3d::core::CoreError> for ModelError {
     }
 }
 
+impl From<cal3d::core::LoaderError> for ModelError {
+    fn from(error: cal3d::core::LoaderError) -> Self {
+        match error {
+            cal3d::core::LoaderError::IoError(e) => ModelError::IoError(e),
+        }
+    }
+}
+
 impl Model {
     pub fn new(path: PathBuf) -> Self {
         Model {
