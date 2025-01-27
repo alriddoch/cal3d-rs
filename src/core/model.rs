@@ -27,7 +27,7 @@ pub struct CalCoreModel {
 
 impl CalCoreModel {
     pub fn loadCoreSkeleton(&mut self, filename: &PathBuf) -> Result<(), loader::LoaderError> {
-        self.pCoreSkeleton = loader::loadCoreSkeleton(filename)?;
+        loader::loadCoreSkeleton(filename, &mut self.pCoreSkeleton)?;
         // FIXME Implement
         Ok(())
     }
