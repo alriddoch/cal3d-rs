@@ -1,6 +1,8 @@
 use std::fs;
 use std::io::{BufReader, Read};
 
+use byteorder::{NativeEndian, ReadBytesExt};
+
 use super::datasource::{DataSource, SourceError};
 
 pub struct BufReaderSource {
@@ -28,23 +30,20 @@ impl DataSource for BufReaderSource {
         Ok(())
     }
 
-    fn readFloat(&mut self, value: f32) -> Result<(), SourceError> {
-        panic!("unimplemented");
-        Ok(())
+    fn readFloat(&mut self) -> Result<f32, SourceError> {
+        Ok(self.reader.read_f32::<NativeEndian>()?)
     }
 
-    fn readShort(&mut self, value: i16) -> Result<(), SourceError> {
-        panic!("unimplemented");
-        Ok(())
+    fn readShort(&mut self) -> Result<i16, SourceError> {
+        Ok(self.reader.read_i16::<NativeEndian>()?)
     }
 
-    fn readInteger(&mut self, value: i32) -> Result<(), SourceError> {
-        panic!("unimplemented");
-        Ok(())
+    fn readInteger(&mut self) -> Result<i32, SourceError> {
+        Ok(self.reader.read_i32::<NativeEndian>()?)
     }
 
     fn readString(&mut self, strValue: String) -> Result<(), SourceError> {
-        panic!("unimplemented");
+        todo!();
         Ok(())
     }
 }
