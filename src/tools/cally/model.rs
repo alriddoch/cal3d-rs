@@ -28,7 +28,7 @@ pub(crate) enum ModelError {
     ParseError(std::num::ParseFloatError),
     CoreError(cal3d::core::CoreError),
     SyntaxError,
-    FormatError(String)
+    FormatError(String),
 }
 
 impl From<std::io::Error> for ModelError {
@@ -61,15 +61,11 @@ impl From<cal3d::core::LoaderError> for ModelError {
             cal3d::core::LoaderError::IoError(e) => ModelError::IoError(e),
             cal3d::core::LoaderError::MagicError => {
                 ModelError::FormatError(String::from("Incorrect magic number"))
-
             }
-            cal3d::core::LoaderError::VersionError=> {
+            cal3d::core::LoaderError::VersionError => {
                 ModelError::FormatError(String::from("Invalid version number"))
             }
-            cal3d::core::LoaderError::FormatError(e) => {
-                ModelError::FormatError(e)
-
-            }
+            cal3d::core::LoaderError::FormatError(e) => ModelError::FormatError(e),
         }
     }
 }

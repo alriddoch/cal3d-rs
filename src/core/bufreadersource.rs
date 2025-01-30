@@ -3,6 +3,8 @@ use std::io::{BufReader, Read};
 
 use byteorder::{NativeEndian, ReadBytesExt};
 
+use crate::core::datasource;
+
 use super::datasource::{DataSource, SourceError};
 
 pub struct BufReaderSource {
@@ -17,7 +19,7 @@ impl BufReaderSource {
 
 impl DataSource for BufReaderSource {
     fn ok(&self) -> bool {
-        false
+        true
     }
 
     fn setError(&mut self) {}
@@ -42,8 +44,18 @@ impl DataSource for BufReaderSource {
         Ok(self.reader.read_i32::<NativeEndian>()?)
     }
 
-    fn readString(&mut self, strValue: String) -> Result<(), SourceError> {
-        todo!();
-        Ok(())
+    fn readString(&mut self) -> Result<String, SourceError> {
+        let length = self.reader.read_i32::<NativeEndian>()?;
+        if length <= 0 || length > datasource::maxStringLength {
+            return Err(SourceError::FormatError(format!(
+                "string length {length} fails sanity check {}",
+                datasource::maxStringLength
+            )));
+        }
+
+        let mut buf: Vec<u8> = vec![0; length as usize];
+        self.readBytes(buf.as_mut_slice(), length as usize)?;
+
+        Ok(String::from_utf8(buf)?)
     }
 }

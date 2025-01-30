@@ -1,6 +1,6 @@
 mod demo;
-mod model;
 mod menu;
+mod model;
 
 use demo::*;
 use model::Model;

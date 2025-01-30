@@ -1,15 +1,18 @@
 use std::path::PathBuf;
+use std::rc::Rc;
 
 use super::loader;
 use super::skeleton::CalCoreSkeleton;
 
 #[derive(Debug)]
-pub enum CoreError {}
+pub enum CoreError {
+    OtherError(String),
+}
 
 #[derive(Default)]
 pub struct CalCoreModel {
     // std::string                           m_strName;
-    pCoreSkeleton: CalCoreSkeleton,
+    pCoreSkeleton: Rc<CalCoreSkeleton>,
     // std::vector<CalCoreAnimationPtr>      m_vectorCoreAnimation;
     // std::vector<CalCoreAnimatedMorph *>   m_vectorCoreAnimatedMorph;
 
@@ -27,7 +30,7 @@ pub struct CalCoreModel {
 
 impl CalCoreModel {
     pub fn loadCoreSkeleton(&mut self, filename: &PathBuf) -> Result<(), loader::LoaderError> {
-        loader::loadCoreSkeleton(filename, &mut self.pCoreSkeleton)?;
+        loader::loadCoreSkeleton(filename, &self.pCoreSkeleton)?;
         // FIXME Implement
         Ok(())
     }
