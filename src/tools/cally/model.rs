@@ -1,3 +1,4 @@
+use std::dbg;
 use std::path::PathBuf;
 
 const STATE_IDLE: i32 = 0;
@@ -99,12 +100,16 @@ impl Model {
             line += 1;
             let mut buff = String::new();
             buff_reader.read_line(&mut buff)?;
-            println!("{}", buff);
-            if buff.len() == 0 || buff.starts_with('#') {
+            if buff.ends_with('\n') {
+                buff.pop();
+            }
+            println!("{}: '{}' ", buff.len(), buff);
+            if buff.len() <= 1 || buff.starts_with('#') {
                 println!("Skipping blank or comment line");
+                continue
             }
 
-            let (key, value) = sscanf::scanf!(buff, "{}={}", str, str)?;
+            let (key, value) = sscanf::scanf!(buff, r"{str}={str:/.+/}")?;
 
             match key {
                 "scale" => {
@@ -148,6 +153,7 @@ impl Model {
     pub fn onInit(&mut self, filename: &str) -> Result<(), ModelError> {
         use std::fs;
         use std::io::BufReader;
+        println!("Opening path: {filename}");
         let mut buff_reader = BufReader::new(fs::File::open(filename)?);
         self.readFile(filename, &mut buff_reader)?;
 

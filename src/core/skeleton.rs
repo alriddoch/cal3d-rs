@@ -25,8 +25,7 @@ impl CalCoreSkeleton {
      *         \li \b -1 if an error happened
      *****************************************************************************/
     pub fn addCoreBone(&self, bone: Rc<CalCoreBone>) -> i32 {
-        let mut bones = self.m_vectorCoreBone.borrow_mut();
-        let boneId = bones.len() as i32;
+        let boneId = self.m_vectorCoreBone.borrow().len() as i32;
 
         // if necessary, add the core bone to the root bone list
         if bone.getParentId() == -1 {
@@ -37,7 +36,7 @@ impl CalCoreSkeleton {
         self.mapCoreBoneName(boneId, bone.getName());
 
         // Delayed, as the bone is moved
-        bones.push(bone);
+        self.m_vectorCoreBone.borrow_mut().push(bone);
 
         return boneId;
     }

@@ -31,22 +31,21 @@ pub struct CalCoreModel {
 impl CalCoreModel {
     pub fn loadCoreSkeleton(&mut self, filename: &PathBuf) -> Result<(), loader::LoaderError> {
         loader::loadCoreSkeleton(filename, &self.pCoreSkeleton)?;
-        // FIXME Implement
         Ok(())
     }
 
     pub fn loadCoreAnimation(&mut self, filename: &PathBuf) -> Result<i32, CoreError> {
-        // FIXME Implement
+        todo!();
         Ok(1)
     }
 
     pub fn loadCoreMesh(&mut self, filename: &PathBuf) -> Result<(), CoreError> {
-        // FIXME Implement
+        todo!();
         Ok(())
     }
 
     pub fn loadCoreMaterial(&mut self, filename: &PathBuf) -> Result<(), CoreError> {
-        // FIXME Implement
+        todo!();
         Ok(())
     }
 }
