@@ -1,4 +1,5 @@
 use std::rc::Rc;
+use std::{default, ops::Mul};
 
 use crate::{CalQuaternion, CalVector};
 
@@ -19,8 +20,8 @@ pub struct CalCoreBone {
     m_listChildId: Vec<i32>,
     m_translation: CalVector<f32>,
     m_rotation: CalQuaternion<f32>,
-    // CalVector        m_translationAbsolute;
-    // CalQuaternion    m_rotationAbsolute;
+    m_translationAbsolute: CalVector<f32>,
+    m_rotationAbsolute: CalQuaternion<f32>,
     m_translationBoneSpace: CalVector<f32>,
     m_rotationBoneSpace: CalQuaternion<f32>,
     // Cal::UserData    m_userData;
@@ -48,6 +49,8 @@ impl CalCoreBone {
             m_listChildId: Vec::<i32>::new(),
             m_translation,
             m_rotation,
+            m_translationAbsolute: CalVector::<f32>::new(0.0, 0.0, 0.0),
+            m_rotationAbsolute: CalQuaternion::<f32>::new(1.0, 0.0, 0.0, 0.0),
             m_translationBoneSpace,
             m_rotationBoneSpace,
         }
@@ -63,5 +66,55 @@ impl CalCoreBone {
 
     pub fn addChildId(&mut self, childId: i32) {
         self.m_listChildId.push(childId);
+    }
+
+    pub fn getRotationAbsolute(&self) -> &CalQuaternion<f32> {
+        &self.m_rotationAbsolute
+    }
+    /**return updated absoltue transaltion.**/
+    pub fn getTranslationAbsolute(&self) -> &CalVector<f32> {
+        &self.m_translationAbsolute
+    }
+
+    //65
+    /*****************************************************************************/
+    /** Calculates the current state.
+     *
+     * This function calculates the current state (absolute translation and
+     * rotation) of the core bone instance and all its children.
+     *****************************************************************************/
+
+    pub fn calculateState(&mut self) {
+        if self.m_parentId == -1 {
+            // no parent, this means absolute state == relative state
+            self.m_translationAbsolute = self.m_translation;
+            self.m_rotationAbsolute = self.m_rotation;
+        } else {
+            // get the parent bone
+            let pParent = self.m_pCoreSkeleton.getCoreBone(self.m_parentId);
+
+            // transform relative state with the absolute state of the parent
+            // self.m_translationAbsolute = self.m_translation;
+            // self.m_translationAbsolute *= pParent.getRotationAbsolute();
+            // self.m_translationAbsolute += pParent.getTranslationAbsolute();
+
+            self.m_translationAbsolute = pParent
+                .borrow()
+                .getRotationAbsolute()
+                .mul(self.m_translation);
+            self.m_translationAbsolute =
+                self.m_translationAbsolute + pParent.borrow().getTranslationAbsolute();
+
+            self.m_rotationAbsolute = self.m_rotation.mul(pParent.borrow().getRotationAbsolute());
+        }
+
+        // calculate all child bones
+
+        for iteratorChildId in self.m_listChildId.iter() {
+            self.m_pCoreSkeleton
+                .getCoreBone(*iteratorChildId)
+                .borrow_mut()
+                .calculateState();
+        }
     }
 }

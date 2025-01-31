@@ -1,3 +1,4 @@
+use std::cell::RefCell;
 use std::fs;
 use std::io::BufReader;
 use std::ops::Mul;
@@ -154,21 +155,16 @@ fn loadCoreSkeletonFromSource(
     }
 
     for bone_id in 0..bone_count {
-        let pCoreBone = loadCoreBones(dataSrc, version, skeleton.clone())?;
+        let bone = loadCoreBones(dataSrc, version, skeleton.clone())?;
 
-        skeleton.addCoreBone(pCoreBone.clone());
+        skeleton.addCoreBone(bone.clone());
 
         // FIXME: This seems redundant, as it's called from within addCoreBone above.
-        skeleton.mapCoreBoneName(bone_id, pCoreBone.getName())?;
+        skeleton.mapCoreBoneName(bone_id, bone.borrow().getName())?;
     }
 
-    todo!();
-    // skeleton.calculateState();
-
-    todo!();
-
+    skeleton.calculateState();
     Ok(())
-    // FIXME Populdate stuff
 }
 
 /*****************************************************************************/
@@ -186,7 +182,7 @@ fn loadCoreBones(
     dataSrc: &mut dyn DataSource,
     version: i32,
     skeleton: Rc<CalCoreSkeleton>,
-) -> Result<Rc<CalCoreBone>, LoaderError> {
+) -> Result<Rc<RefCell<CalCoreBone>>, LoaderError> {
     let hasNodeLights = (version >= FIRST_FILE_VERSION_WITH_NODE_LIGHTS);
 
     //   if !dataSrc.ok()  {
@@ -277,7 +273,7 @@ fn loadCoreBones(
     }
 
     // allocate a new core bone instance
-    let pCoreBone = Rc::new(CalCoreBone::new(
+    let pCoreBone = Rc::new(RefCell::new(CalCoreBone::new(
         strName,
         // CalCoreSkeleton *m_pCoreSkeleton;
         skeleton,
@@ -290,7 +286,7 @@ fn loadCoreBones(
         CalVector::<f32>::new(txBoneSpace, tyBoneSpace, tzBoneSpace),
         rotbs,
         // name: strName, m_parentId, m_translation,
-    ));
+    )));
 
     Ok(pCoreBone)
 }

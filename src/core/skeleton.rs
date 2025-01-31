@@ -6,12 +6,16 @@ use super::bone::CalCoreBone;
 
 #[derive(Default)]
 pub struct CalCoreSkeleton {
-    m_vectorCoreBone: RefCell<Vec<Rc<CalCoreBone>>>,
+    m_vectorCoreBone: RefCell<Vec<Rc<RefCell<CalCoreBone>>>>,
     m_mapCoreBoneNames: RefCell<BTreeMap<String, i32>>,
     m_vectorRootCoreBoneId: RefCell<Vec<i32>>,
 }
 
 impl CalCoreSkeleton {
+    pub fn getCoreBone(&self, coreBoneId: i32) -> Rc<RefCell<CalCoreBone>> {
+        self.m_vectorCoreBone.borrow()[coreBoneId as usize].clone()
+    }
+
     //43
     /*****************************************************************************/
     /** Adds a core bone.
@@ -24,21 +28,35 @@ impl CalCoreSkeleton {
      *         \li the assigned bone \b ID of the added core bone
      *         \li \b -1 if an error happened
      *****************************************************************************/
-    pub fn addCoreBone(&self, bone: Rc<CalCoreBone>) -> i32 {
+    pub fn addCoreBone(&self, bone: Rc<RefCell<CalCoreBone>>) -> i32 {
         let boneId = self.m_vectorCoreBone.borrow().len() as i32;
 
         // if necessary, add the core bone to the root bone list
-        if bone.getParentId() == -1 {
+        if bone.borrow().getParentId() == -1 {
             self.m_vectorRootCoreBoneId.borrow_mut().push(boneId);
         }
 
         // add a reference from the bone's name to its id
-        self.mapCoreBoneName(boneId, bone.getName());
+        self.mapCoreBoneName(boneId, bone.borrow().getName());
 
         // Delayed, as the bone is moved
         self.m_vectorCoreBone.borrow_mut().push(bone);
 
         return boneId;
+    }
+
+    /*****************************************************************************/
+    /** Calculates the current state.
+     *
+     * This function calculates the current state of the core skeleton instance by
+     * calculating all the core bone states.
+     *****************************************************************************/
+    pub fn calculateState(&self) {
+        // calculate all bone states of the skeleton
+
+        for iteratorRootCoreBoneId in self.m_vectorRootCoreBoneId.borrow().iter() {
+            self.m_vectorCoreBone.borrow()[*iteratorRootCoreBoneId as usize].borrow_mut().calculateState();
+        }
     }
 
     //224
