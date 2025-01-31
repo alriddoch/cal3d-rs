@@ -12,8 +12,8 @@ pub struct CalCoreSkeleton {
 }
 
 impl CalCoreSkeleton {
-    pub fn getCoreBone(&self, coreBoneId: i32) -> Rc<RefCell<CalCoreBone>> {
-        self.m_vectorCoreBone.borrow()[coreBoneId as usize].clone()
+    pub fn getCoreBone(&self, coreBoneId: i32) -> Option<Rc<RefCell<CalCoreBone>>> {
+        self.m_vectorCoreBone.borrow().get(coreBoneId as usize).map(|b| {b.clone()})
     }
 
     //43

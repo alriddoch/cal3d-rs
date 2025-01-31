@@ -7,10 +7,12 @@ use std::rc::Rc;
 
 use crate::{CalQuaternion, CalVector};
 
+use super::animation::CalCoreAnimation;
 use super::bone::{CalCoreBone, CalLightType};
 use super::bufreadersource::BufReaderSource;
 use super::datasource::{DataSource, SourceError};
 use super::skeleton::CalCoreSkeleton;
+use super::track::CalCoreTrack;
 use super::CoreError;
 
 const SKELETON_FILE_MAGIC: &[u8; 4] = b"CSF\0";
@@ -47,6 +49,10 @@ const FIRST_FILE_VERSION_WITH_UPDATED_MORPHMIXER: i32 = 1301;
 const LOADER_ROTATE_X_AXIS: i32 = 1;
 const LOADER_INVERT_V_COORD: i32 = 2;
 const LOADER_FLIP_WINDING: i32 = 4;
+
+pub fn versionHasCompressionFlag( version: i32) -> bool {
+    return version >= 1300;
+  }
 
 pub static loadingMode: i32 = 0;
 
@@ -94,6 +100,36 @@ fn CalVectorFromDataSrc(dataSrc: &mut dyn DataSource) -> Result<CalVector<f32>, 
     Ok(v)
 }
 
+//115
+/*****************************************************************************/
+/** Loads a core animation instance.
+ *
+ * This function loads a core animation instance from a file.
+ *
+ * @param strFilename The file to load the core animation instance from.
+ *
+ * @return One of the following values:
+ *         \li a pointer to the core animation
+ *         \li \b 0 if an error happened
+ *****************************************************************************/
+
+  pub fn loadCoreAnimation(filename: &PathBuf, skel: &Rc<CalCoreSkeleton>) -> Result<Rc<RefCell<CalCoreAnimation>>, LoaderError> {
+    let magic: String = String::from_utf8_lossy(ANIMATION_XMLFILE_MAGIC)
+    .trim_matches(char::from(0))
+    .to_owned();
+if filename.to_str().unwrap().ends_with(magic.as_str()) {
+    todo!();
+}
+
+let mut buff_reader = BufReader::new(fs::File::open(filename)?);
+
+let mut source = BufReaderSource::new(buff_reader);
+
+    let coreanim = loadCoreAnimationFromSource( &mut source, skel )?;
+
+    Ok(coreanim)
+  }
+
 //261
 /*****************************************************************************/
 /** Loads a core skeleton instance.
@@ -110,13 +146,95 @@ pub fn loadCoreSkeleton(
     filename: &PathBuf,
     skeleton: &Rc<CalCoreSkeleton>,
 ) -> Result<(), LoaderError> {
-    // FIXME check for XML file extension, and call XML lib.
+    let magic: String = String::from_utf8_lossy(SKELETON_XMLFILE_MAGIC)
+        .trim_matches(char::from(0))
+        .to_owned();
+    if filename.to_str().unwrap().ends_with(magic.as_str()) {
+        todo!();
+    }
+
     let mut buff_reader = BufReader::new(fs::File::open(filename)?);
 
     let mut source = BufReaderSource::new(buff_reader);
 
     return loadCoreSkeletonFromSource(&mut source, skeleton);
 }
+
+//552
+ /*****************************************************************************/
+/** Loads a core animation instance.
+  *
+  * This function loads a core animation instance from a data source.
+  *
+  * @param dataSrc The data source to load the core animation instance from.
+  *
+  * @return One of the following values:
+  *         \li a pointer to the core animation
+  *         \li \b 0 if an error happened
+  *****************************************************************************/
+
+  pub fn loadCoreAnimationFromSource(dataSrc: &mut dyn DataSource, skel: &Rc<CalCoreSkeleton>) -> Result<Rc<RefCell<CalCoreAnimation>>, LoaderError> {
+  
+    let mut magic: [u8; 4] = [0; 4];
+    let magic_len = magic.len();
+    dataSrc.readBytes(&mut magic, magic_len)?;
+    if &magic != ANIMATION_FILE_MAGIC.as_slice() {
+        return Err(LoaderError::MagicError);
+    }
+
+    let version = dataSrc.readInteger()?;
+    if version < EARLIEST_COMPATIBLE_FILE_VERSION || version > CURRENT_FILE_VERSION {
+        return Err(LoaderError::VersionError);
+    }
+    
+    let useAnimationCompression = usesAnimationCompression(version);
+    if versionHasCompressionFlag(version) {
+       let compressionFlag = dataSrc.readInteger()?;
+
+       // Only really need the first bit.
+       useAnimationCompression = compressionFlag != 0;
+    }
+  
+  
+    // allocate a new core animation instance
+    // FIXME Maybe move this down?
+    let pCoreAnimation =  Rc::new(RefCell::new(CalCoreAnimation::new()));
+  
+    // get the duration of the core animation
+    let duration = dataSrc.readFloat()?;
+  
+    // check for a valid duration
+    if duration <= 0.0    {
+        return Err(LoaderError::FormatError(format!("Animation duration {duration} is negative")));
+    }
+  
+    // set the duration in the core animation instance
+    pCoreAnimation.setDuration(duration);
+  
+    // read the number of tracks
+    let trackCount = dataSrc.readInteger()?;
+    if trackCount <= 0    {
+        return Err(LoaderError::FormatError(format!("Animation track count {trackCount} is negative")));
+    }
+  
+      // read flags
+      let flags = 0;
+      if version >= LIBRARY_VERSION {
+        flags = dataSrc.readInteger()?;
+      }
+  
+    // load all core bones
+    
+    for trackId in 0..trackCount    {
+      // load the core track
+      let pCoreTrack= loadCoreTrack(dataSrc,skel, version, useAnimationCompression)?;
+  
+      // add the core track to the core animation instance
+      pCoreAnimation.addCoreTrack(pCoreTrack);
+    }
+  
+    return Ok(pCoreAnimation);
+  }
 
 //953
 /*****************************************************************************/
@@ -134,7 +252,6 @@ fn loadCoreSkeletonFromSource(
     dataSrc: &mut dyn DataSource,
     skeleton: &Rc<CalCoreSkeleton>,
 ) -> Result<(), LoaderError> {
-    // FIXME Check stuff
     let mut magic: [u8; 4] = [0; 4];
     let magic_len = magic.len();
     dataSrc.readBytes(&mut magic, magic_len)?;
@@ -289,4 +406,129 @@ fn loadCoreBones(
     )));
 
     Ok(pCoreBone)
+}
+
+//1158
+fn usesAnimationCompression(version: i32 ) -> bool {
+   (version >= FIRST_FILE_VERSION_WITH_ANIMATION_COMPRESSION)
+}
+
+//2051
+/*****************************************************************************/
+/** Loads a core track instance.
+*
+* This function loads a core track instance from a data source.
+*
+* @param dataSrc The data source to load the core track instance from.
+*
+* @return One of the following values:
+*         \li a pointer to the core track
+*         \li \b 0 if an error happened
+*****************************************************************************/
+pub fn loadCoreTrack(
+     dataSrc: &mut dyn DataSource,  skel: &Rc<CalCoreSkeleton>,
+    version: i32,  useAnimationCompression: bool) -> Result<Rc<CalCoreTrack>, LoaderError> {
+// if(!dataSrc.ok())
+// {
+// dataSrc.setError();
+// return 0;
+// }
+
+// Read the bone id.
+let coreBoneId: i32;
+let translationRequired = true;
+let highRangeRequired = true;
+let translationIsDynamic = true;
+let keyframeCount: i32;
+let buf: [u8; 4 ];
+
+// If this file version supports animation compression, then I store the boneId in 15 bits,
+// and use the 16th bit to record if translation is required.
+if useAnimationCompression  {
+    dataSrc.readBytes( buf, 4 )?;
+
+
+// Stored low byte first.  Top 3 bits of coreBoneId are compression flags.
+coreBoneId = buf[ 0 ] as i32 +  ( buf[ 1 ] as i32 & 0x1f ) * 256;
+translationRequired = ( buf[ 1 ] & 0x80 ) == 0x80;
+highRangeRequired = ( buf[ 1 ] & 0x40 ) == 0x40;
+translationIsDynamic = ( buf[ 1 ] & 0x20) == 0x20;
+keyframeCount = buf[ 2 ] as i32 +  buf[ 3 ] as i32 * 256;
+//if( keyframeCount > keyframeTimeMax ) {
+//  CalError::setLastError(CalError::INVALID_FILE_FORMAT, __FILE__, __LINE__);
+//  return NULL;
+//}
+} else {
+coreBoneId = dataSrc.readInteger()?;
+
+// Read the number of keyframes.
+keyframeCount = dataSrc.readInteger()?;
+if keyframeCount <= 0 {
+    return Err(LoaderError::FormatError(format!("Keyframe count {keyframeCount} is negative")));
+}
+}
+
+if coreBoneId < 0 {
+    return Err(LoaderError::FormatError(format!("Core bone ID {coreBoneId} is negative")));
+}
+
+// allocate a new core track instance
+let pCoreTrack = Rc::new(CalCoreTrack::new(coreBoneId, translationRequired, highRangeRequired, translationIsDynamic));
+
+let cb = skel.getCoreBone( coreBoneId );
+
+
+// load all core keyframes
+
+ let lastCoreKeyframe: Option<Rc<CalCoreKeyframe>> = None;
+for keyframeId in 0..keyframeCount {
+// load the core keyframe
+todo!();
+// let pCoreKeyframe = loadCoreKeyframe(
+// dataSrc, cb, version, lastCoreKeyframe, translationRequired, highRangeRequired, translationIsDynamic,
+// useAnimationCompression);
+// lastCoreKeyframe = pCoreKeyframe;
+// if(pCoreKeyframe == 0)
+// {
+// delete pCoreTrack;
+// return 0;
+// }
+// if (loadingMode & LOADER_ROTATE_X_AXIS)
+// {
+// // Check for anim rotation
+// if (skel && skel.getCoreBone(coreBoneId).getParentId() == -1)  // root bone
+// {
+// // rotate root bone quaternion
+// CalQuaternion rot = pCoreKeyframe.getRotation();
+// CalQuaternion x_axis_90(0.7071067811f,0.0f,0.0f,0.7071067811f);
+// rot *= x_axis_90;
+// pCoreKeyframe.setRotation(rot);
+// // rotate root bone displacement
+// CalVector vec = pCoreKeyframe.getTranslation();
+// vec *= x_axis_90;
+// pCoreKeyframe.setTranslation(vec);
+// }
+// }
+
+// // add the core keyframe to the core track instance
+// pCoreTrack.addCoreKeyframe(pCoreKeyframe);
+}
+
+// // Whenever I load the track, I update its translationRequired status.  The status can
+// // go from required to not required, but not the other way around.
+// pCoreTrack.setTranslationRequired( translationRequired );
+// pCoreTrack.setHighRangeRequired( highRangeRequired );
+// pCoreTrack.setTranslationIsDynamic( translationIsDynamic );
+// if( collapseSequencesOn ) {
+// pCoreTrack.collapseSequences( translationTolerance, rotationToleranceDegrees );
+// }
+// if( loadingCompressionOn ) {
+
+// // This function MIGHT call setTranslationRequired() on the track.
+// // Alas, you may be passing me NULL for skel, in which case compress() won't update the
+// // translationRequired flag; instead it will leave it, as above.
+// pCoreTrack.compress( translationTolerance, rotationToleranceDegrees, skel );
+// }
+
+Ok(pCoreTrack)
 }
