@@ -1,3 +1,8 @@
+use std::rc::Rc;
+
+use super::keyframe::CalCoreKeyframe;
+use super::skeleton::CalCoreSkeleton;
+
 pub struct CalCoreTrack {
     // /// The index of the associated CoreBone in the CoreSkeleton.
     m_coreBoneId: i32,
@@ -11,7 +16,7 @@ pub struct CalCoreTrack {
     // static int m_translationNotRequiredCount;
 
     // /// List of keyframes, always sorted by time.
-    // std::vector<CalCoreKeyframe*> m_keyframes;
+    m_keyframes: Vec<Rc<CalCoreKeyframe>>,
 }
 
 impl CalCoreTrack {
@@ -20,12 +25,24 @@ impl CalCoreTrack {
         m_translationRequired: bool,
         m_highRangeRequired: bool,
         m_translationIsDynamic: bool,
+        m_keyframes: Vec<Rc<CalCoreKeyframe>>,
     ) -> Self {
         CalCoreTrack {
             m_coreBoneId,
             m_translationRequired,
             m_highRangeRequired,
             m_translationIsDynamic,
+            m_keyframes,
         }
+    }
+
+    //226
+    pub fn compress(&self, translationTolerance: f64, rotationToleranceDegrees: f64, skel: &Rc<CalCoreSkeleton>) {
+        todo!();
+    }
+
+    //344
+    pub fn collapseSequences(&self, translationTolerance: f64, rotationToleranceDegrees: f64) {
+        todo!();
     }
 }

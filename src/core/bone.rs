@@ -93,28 +93,41 @@ impl CalCoreBone {
             // get the parent bone
             let pParent = self.m_pCoreSkeleton.getCoreBone(self.m_parentId);
 
-            // transform relative state with the absolute state of the parent
-            // self.m_translationAbsolute = self.m_translation;
-            // self.m_translationAbsolute *= pParent.getRotationAbsolute();
-            // self.m_translationAbsolute += pParent.getTranslationAbsolute();
+            if pParent.is_some() {
+                // transform relative state with the absolute state of the parent
+                // self.m_translationAbsolute = self.m_translation;
+                // self.m_translationAbsolute *= pParent.getRotationAbsolute();
+                // self.m_translationAbsolute += pParent.getTranslationAbsolute();
+                let parent = pParent.as_ref().unwrap().borrow();
 
-            self.m_translationAbsolute = pParent
-                .borrow()
-                .getRotationAbsolute()
-                .mul(self.m_translation);
-            self.m_translationAbsolute =
-                self.m_translationAbsolute + pParent.borrow().getTranslationAbsolute();
+                self.m_translationAbsolute = parent
+                    .getRotationAbsolute()
+                    .mul(self.m_translation);
+                self.m_translationAbsolute =
+                    self.m_translationAbsolute + parent.getTranslationAbsolute();
 
-            self.m_rotationAbsolute = self.m_rotation.mul(pParent.borrow().getRotationAbsolute());
+                self.m_rotationAbsolute =
+                    self.m_rotation.mul(parent.getRotationAbsolute());
+            } else {
+                eprintln!(
+                    "Invalid parent bone Id {} in calculateState",
+                    self.m_parentId
+                );
+            }
         }
 
         // calculate all child bones
 
         for iteratorChildId in self.m_listChildId.iter() {
-            self.m_pCoreSkeleton
-                .getCoreBone(*iteratorChildId)
-                .borrow_mut()
-                .calculateState();
+            let bone = self.m_pCoreSkeleton.getCoreBone(*iteratorChildId);
+            if bone.is_some() {
+                bone.unwrap().borrow_mut().calculateState();
+            } else {
+                eprintln!(
+                    "Invalid child bone Id {} in calculateState",
+                    self.m_parentId
+                );
+            }
         }
     }
 }

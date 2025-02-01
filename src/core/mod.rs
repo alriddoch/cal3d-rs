@@ -2,6 +2,7 @@ mod animation;
 mod bone;
 mod bufreadersource;
 mod datasource;
+mod keyframe;
 mod loader;
 mod model;
 mod skeleton;
