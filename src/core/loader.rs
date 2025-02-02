@@ -129,7 +129,7 @@ pub fn loadCoreAnimation(
         todo!();
     }
 
-    let mut buff_reader = BufReader::new(fs::File::open(filename)?);
+    let buff_reader = BufReader::new(fs::File::open(filename)?);
 
     let mut source = BufReaderSource::new(buff_reader);
 
