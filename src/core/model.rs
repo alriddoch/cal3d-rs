@@ -1,3 +1,4 @@
+use std::cell::RefCell;
 use std::path::PathBuf;
 use std::rc::Rc;
 
@@ -12,7 +13,7 @@ pub enum CoreError {
 #[derive(Default)]
 pub struct CalCoreModel {
     // std::string                           m_strName;
-    pCoreSkeleton: Rc<CalCoreSkeleton>,
+    pCoreSkeleton: Rc<RefCell<CalCoreSkeleton>>,
     // std::vector<CalCoreAnimationPtr>      m_vectorCoreAnimation;
     // std::vector<CalCoreAnimatedMorph *>   m_vectorCoreAnimatedMorph;
 

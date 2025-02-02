@@ -1,3 +1,4 @@
+use std::cell::RefCell;
 use std::rc::Rc;
 
 use super::keyframe::CalCoreKeyframe;
@@ -37,7 +38,7 @@ impl CalCoreTrack {
     }
 
     //226
-    pub fn compress(&self, translationTolerance: f64, rotationToleranceDegrees: f64, skel: &Rc<CalCoreSkeleton>) {
+    pub fn compress(&self, translationTolerance: f64, rotationToleranceDegrees: f64, skel: &Rc<RefCell<CalCoreSkeleton>>) {
         todo!();
     }
 

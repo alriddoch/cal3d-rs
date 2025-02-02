@@ -120,7 +120,7 @@ fn CalVectorFromDataSrc(dataSrc: &mut dyn DataSource) -> Result<CalVector<f32>, 
 
 pub fn loadCoreAnimation(
     filename: &PathBuf,
-    skel: &Rc<CalCoreSkeleton>,
+    skel: &Rc<RefCell<CalCoreSkeleton>>,
 ) -> Result<Rc<RefCell<CalCoreAnimation>>, LoaderError> {
     let magic: String = String::from_utf8_lossy(ANIMATION_XMLFILE_MAGIC)
         .trim_matches(char::from(0))
@@ -152,7 +152,7 @@ pub fn loadCoreAnimation(
  *****************************************************************************/
 pub fn loadCoreSkeleton(
     filename: &PathBuf,
-    skeleton: &Rc<CalCoreSkeleton>,
+    skeleton: &Rc<RefCell<CalCoreSkeleton>>,
 ) -> Result<(), LoaderError> {
     let magic: String = String::from_utf8_lossy(SKELETON_XMLFILE_MAGIC)
         .trim_matches(char::from(0))
@@ -183,7 +183,7 @@ pub fn loadCoreSkeleton(
 
 pub fn loadCoreAnimationFromSource(
     dataSrc: &mut dyn DataSource,
-    skel: &Rc<CalCoreSkeleton>,
+    skel: &Rc<RefCell<CalCoreSkeleton>>,
 ) -> Result<Rc<RefCell<CalCoreAnimation>>, LoaderError> {
     let mut magic: [u8; 4] = [0; 4];
     let magic_len = magic.len();
@@ -266,7 +266,7 @@ pub fn loadCoreAnimationFromSource(
  *****************************************************************************/
 fn loadCoreSkeletonFromSource(
     dataSrc: &mut dyn DataSource,
-    skeleton: &Rc<CalCoreSkeleton>,
+    skel: &Rc<RefCell<CalCoreSkeleton>>,
 ) -> Result<(), LoaderError> {
     let mut magic: [u8; 4] = [0; 4];
     let magic_len = magic.len();
@@ -287,8 +287,9 @@ fn loadCoreSkeletonFromSource(
         )));
     }
 
+    let mut skeleton = skel.borrow_mut();
     for bone_id in 0..bone_count {
-        let bone = loadCoreBones(dataSrc, version, skeleton.clone())?;
+        let bone = loadCoreBones(dataSrc, version, skel.clone())?;
 
         skeleton.addCoreBone(bone.clone());
 
@@ -314,7 +315,7 @@ fn loadCoreSkeletonFromSource(
 fn loadCoreBones(
     dataSrc: &mut dyn DataSource,
     version: i32,
-    skeleton: Rc<CalCoreSkeleton>,
+    skeleton: Rc<RefCell<CalCoreSkeleton>>,
 ) -> Result<Rc<RefCell<CalCoreBone>>, LoaderError> {
     let hasNodeLights = (version >= FIRST_FILE_VERSION_WITH_NODE_LIGHTS);
 
@@ -563,7 +564,7 @@ pub fn loadCoreKeyframe(
 *****************************************************************************/
 pub fn loadCoreTrack(
     dataSrc: &mut dyn DataSource,
-    skel: &Rc<CalCoreSkeleton>,
+    skeleton: &Rc<RefCell<CalCoreSkeleton>>,
     version: i32,
     use_animation_compression: bool,
 ) -> Result<Rc<CalCoreTrack>, LoaderError> {
@@ -616,6 +617,8 @@ pub fn loadCoreTrack(
 
     // allocate a new core track instance
 
+    let skel = skeleton.borrow();
+
     let cb = skel.getCoreBone(core_bone_id);
 
     // load all core keyframes
@@ -663,6 +666,7 @@ pub fn loadCoreTrack(
         // add the core keyframe to the core track instance
         core_key_frames.push(p2);
     }
+    drop(skel);
 
     // Whenever I load the track, I update its translationRequired status.  The status can
     // go from required to not required, but not the other way around.
@@ -686,7 +690,7 @@ pub fn loadCoreTrack(
         // This function MIGHT call setTranslationRequired() on the track.
         // Alas, you may be passing me NULL for skel, in which case compress() won't update the
         // translationRequired flag; instead it will leave it, as above.
-        pCoreTrack.compress(translationTolerance, rotationToleranceDegrees, skel);
+        pCoreTrack.compress(translationTolerance, rotationToleranceDegrees, skeleton);
     }
 
     Ok(pCoreTrack)

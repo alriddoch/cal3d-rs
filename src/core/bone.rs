@@ -1,3 +1,4 @@
+use std::cell::RefCell;
 use std::rc::Rc;
 use std::{default, ops::Mul};
 
@@ -15,7 +16,7 @@ pub enum CalLightType {
 
 pub struct CalCoreBone {
     m_strName: String,
-    m_pCoreSkeleton: Rc<CalCoreSkeleton>,
+    m_pCoreSkeleton: Rc<RefCell<CalCoreSkeleton>>,
     m_parentId: i32,
     m_listChildId: Vec<i32>,
     m_translation: CalVector<f32>,
@@ -34,7 +35,7 @@ pub struct CalCoreBone {
 impl CalCoreBone {
     pub fn new(
         m_strName: String,
-        m_pCoreSkeleton: Rc<CalCoreSkeleton>,
+        m_pCoreSkeleton: Rc<RefCell<CalCoreSkeleton>>,
         m_parentId: i32,
         m_listChildId: Vec<i32>,
         m_translation: CalVector<f32>,
@@ -91,7 +92,7 @@ impl CalCoreBone {
             self.m_rotationAbsolute = self.m_rotation;
         } else {
             // get the parent bone
-            let pParent = self.m_pCoreSkeleton.getCoreBone(self.m_parentId);
+            let pParent = self.m_pCoreSkeleton.borrow().getCoreBone(self.m_parentId);
 
             if pParent.is_some() {
                 // transform relative state with the absolute state of the parent
@@ -119,7 +120,7 @@ impl CalCoreBone {
         // calculate all child bones
 
         for iteratorChildId in self.m_listChildId.iter() {
-            let bone = self.m_pCoreSkeleton.getCoreBone(*iteratorChildId);
+            let bone = self.m_pCoreSkeleton.borrow().getCoreBone(*iteratorChildId);
             if bone.is_some() {
                 bone.unwrap().borrow_mut().calculateState();
             } else {
