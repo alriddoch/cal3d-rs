@@ -452,17 +452,12 @@ pub fn loadCoreKeyframe(
     translationIsDynamic: bool,
     useAnimationCompression: bool,
 ) -> Result<CalCoreKeyframe, LoaderError> {
-    todo!();
-    //    if(!dataSrc.ok())
-    //    {
-    //      dataSrc.setError();
-    //      return 0;
-    //    }
+    let time: f32;
+    let translation: CalVector<f32>;
+    let rotation: CalQuaternion<f32>;
 
-    //    float time;
-    //    float tx, ty, tz;
-    //    float rx, ry, rz, rw;
-    //    if( useAnimationCompression ) {
+    if useAnimationCompression {
+        todo!();
     //       unsigned int bytesRequired = compressedKeyframeRequiredBytes( prevCoreKeyframe, translationRequired, highRangeRequired, translationIsDynamic );
     //       assert( bytesRequired < 100 );
     //       unsigned char buf[ 100 ];
@@ -504,50 +499,37 @@ pub fn loadCoreKeyframe(
     //             dataSrc.readFloat(rw);
     //          }
     //       }
-    //    } else {
-    //       dataSrc.readFloat(time);
+    } else {
+        time = dataSrc.readFloat()?;
 
-    //       // get the translation of the bone
-    //       dataSrc.readFloat(tx);
-    //       dataSrc.readFloat(ty);
-    //       dataSrc.readFloat(tz);
+        // get the translation of the bone
+        let mut tx = dataSrc.readFloat()?;
+        let mut ty = dataSrc.readFloat()?;
+        let mut tz = dataSrc.readFloat()?;
 
-    //       if (coreboneOrNull && TranslationInvalid(CalVector(tx, ty, tz))) {
-    //          CalVector tv = coreboneOrNull->getTranslation();
-    //          tx = tv.x;
-    //          ty = tv.y;
-    //          tz = tv.z;
-    //       }
+        if coreboneOrNull.is_some() && TranslationInvalid(tx, ty, tz) {
+            let bone = coreboneOrNull.as_ref().unwrap().borrow();
+            let tv = bone.getTranslation();
+            tx = tv.x;
+            ty = tv.y;
+            tz = tv.z;
+        }
 
-    //       // get the rotation of the bone
-    //       dataSrc.readFloat(rx);
-    //       dataSrc.readFloat(ry);
-    //       dataSrc.readFloat(rz);
-    //       dataSrc.readFloat(rw);
-    //    }
+        translation = CalVector::<f32>::new(tx, ty, tz);
 
-    //    // check if an error happened
-    //    if(!dataSrc.ok())
-    //    {
-    //      dataSrc.setError();
-    //      return 0;
-    //    }
+        // get the rotation of the bone
+        let rx = dataSrc.readFloat()?;
+        let ry = dataSrc.readFloat()?;
+        let rz = dataSrc.readFloat()?;
+        let rw = dataSrc.readFloat()?;
 
-    //    // allocate a new core keyframe instance
-    //    CalCoreKeyframe *pCoreKeyframe = new(std::nothrow) CalCoreKeyframe();
+        rotation = CalQuaternion::<f32>::new(rw, rx, ry, rz);
+    }
 
-    //    if(pCoreKeyframe == 0)
-    //    {
-    //      CalError::setLastError(CalError::MEMORY_ALLOCATION_FAILED, __FILE__, __LINE__);
-    //      return 0;
-    //    }
+    // allocate a new core keyframe instance
+    let pCoreKeyframe = CalCoreKeyframe::new(time, translation, rotation);
 
-    //    // set all attributes of the keyframe
-    //    pCoreKeyframe->setTime(time);
-    //    pCoreKeyframe->setTranslation(CalVector(tx, ty, tz));
-    //    pCoreKeyframe->setRotation(CalQuaternion(rx, ry, rz, rw));
-
-    //    return pCoreKeyframe;
+    Ok(pCoreKeyframe)
 }
 
 //2051
@@ -694,4 +676,10 @@ pub fn loadCoreTrack(
     }
 
     Ok(pCoreTrack)
+}
+
+const InvalidCoord: f32 = 1e10;
+
+fn TranslationInvalid(x: f32, y: f32, z: f32) -> bool {
+    return x == InvalidCoord && y == InvalidCoord && z == InvalidCoord;
 }

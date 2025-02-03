@@ -69,6 +69,14 @@ impl CalCoreBone {
         self.m_listChildId.push(childId);
     }
 
+    pub fn getTranslation(&self) -> &CalVector<f32> {
+        &self.m_translation
+    }
+
+    pub fn getRotation(&self) -> &CalQuaternion<f32> {
+        &self.m_rotation
+    }
+
     pub fn getRotationAbsolute(&self) -> &CalQuaternion<f32> {
         &self.m_rotationAbsolute
     }

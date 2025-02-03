@@ -2,6 +2,7 @@ use std::cell::RefCell;
 use std::path::PathBuf;
 use std::rc::Rc;
 
+use super::animation::CalCoreAnimation;
 use super::loader;
 use super::skeleton::CalCoreSkeleton;
 
@@ -14,7 +15,7 @@ pub enum CoreError {
 pub struct CalCoreModel {
     // std::string                           m_strName;
     pCoreSkeleton: Rc<RefCell<CalCoreSkeleton>>,
-    // std::vector<CalCoreAnimationPtr>      m_vectorCoreAnimation;
+    m_vectorCoreAnimation: Vec<Rc<RefCell<CalCoreAnimation>>>,
     // std::vector<CalCoreAnimatedMorph *>   m_vectorCoreAnimatedMorph;
 
     // std::vector<CalCoreMeshPtr>           m_vectorCoreMesh;
@@ -30,6 +31,31 @@ pub struct CalCoreModel {
 }
 
 impl CalCoreModel {
+    /*****************************************************************************/
+    /** Adds a core animation.
+     *
+     * This function adds a core animation to the core model instance.
+     *
+     * @param pCoreAnimation A pointer to the core animation that should be added.
+     *
+     * @return \li the assigned animation \b ID of the added core animation
+     *****************************************************************************/
+
+    fn addCoreAnimation(&mut self, pCoreAnimation: Rc<RefCell<CalCoreAnimation>>) -> i32 {
+        let num = self.m_vectorCoreAnimation.len();
+
+        // FIXME: Can Rc be null in Rust? No. Unclear if this is necessary for now.
+        // for i in 0..num    {
+        //   if !self.m_vectorCoreAnimation[ i ]       {
+        //     self.m_vectorCoreAnimation[ i ] = pCoreAnimation;
+        //     return i;
+        //   }
+        // }
+
+        self.m_vectorCoreAnimation.push(pCoreAnimation);
+        num as i32
+    }
+
     //1404
     /*****************************************************************************/
     /** Loads the core skeleton.
@@ -72,10 +98,8 @@ impl CalCoreModel {
         // load a new core animation
         let pCoreAnimation = loader::loadCoreAnimation(filename, &self.pCoreSkeleton)?;
 
-        todo!();
         // add core animation to this core model
-        //   return addCoreAnimation(pCoreAnimation.get());
-        Ok(1)
+        Ok(self.addCoreAnimation(pCoreAnimation))
     }
 
     pub fn loadCoreMesh(&mut self, filename: &PathBuf) -> Result<(), CoreError> {
