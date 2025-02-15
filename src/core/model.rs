@@ -102,9 +102,29 @@ impl CalCoreModel {
         Ok(self.addCoreAnimation(pCoreAnimation))
     }
 
-    pub fn loadCoreMesh(&mut self, filename: &PathBuf) -> Result<(), CoreError> {
-        todo!();
-        Ok(())
+    //1211
+    /*****************************************************************************/
+    /** Loads a core mesh.
+     *
+     * This function loads a core mesh from a file.
+     *
+     * @param strFilename The file from which the core mesh should be loaded from.
+     *
+     * @return One of the following values:
+     *         \li the assigned \b ID of the loaded core mesh
+     *         \li \b -1 if an error happened
+     *****************************************************************************/
+    pub fn loadCoreMesh(&mut self, filename: &PathBuf) -> Result<i32, CoreError> {
+        // FIXME Check if skeleton has been loaded.
+        // the core skeleton has to be loaded already
+        //   if(!m_pCoreSkeleton)  {
+        //     CalError::setLastError(CalError::INVALID_HANDLE, __FILE__, __LINE__);
+        //     return -1;
+        //   }
+
+        let pCoreMesh = loader::loadCoreMesh(filename)?;
+
+        Ok(self.addCoreMesh(pCoreMesh))
     }
 
     pub fn loadCoreMaterial(&mut self, filename: &PathBuf) -> Result<(), CoreError> {

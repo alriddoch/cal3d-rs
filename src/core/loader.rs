@@ -12,6 +12,7 @@ use super::bone::{CalCoreBone, CalLightType};
 use super::bufreadersource::BufReaderSource;
 use super::datasource::{DataSource, SourceError};
 use super::keyframe::CalCoreKeyframe;
+use super::mesh::CalCoreMesh;
 use super::skeleton::CalCoreSkeleton;
 use super::track::CalCoreTrack;
 use super::CoreError;
@@ -138,7 +139,37 @@ pub fn loadCoreAnimation(
     Ok(coreanim)
 }
 
-//261
+//217
+/*****************************************************************************/
+/** Loads a core mesh instance.
+ *
+ * This function loads a core mesh instance from a file.
+ *
+ * @param strFilename The file to load the core mesh instance from.
+ *
+ * @return One of the following values:
+ *         \li a pointer to the core mesh
+ *         \li \b 0 if an error happened
+ *****************************************************************************/
+pub fn loadCoreMesh(filename: &PathBuf) -> Result<Rc<RefCell<CalCoreMesh>>, LoaderError> {
+    let magic: String = String::from_utf8_lossy(MESH_XMLFILE_MAGIC)
+        .trim_matches(char::from(0))
+        .to_owned();
+    if filename.to_str().unwrap().ends_with(magic.as_str()) {
+        todo!();
+        // loadXmlCoreMesh(strFilename);
+    }
+
+    let mut buff_reader = BufReader::new(fs::File::open(filename)?);
+
+    let mut source = BufReaderSource::new(buff_reader);
+
+    let coremesh = loadCoreMeshFromSource(&mut source);
+
+    //if(coremesh) coremesh->setFilename( strFilename );
+
+    Ok(coremesh)
+}
 /*****************************************************************************/
 /** Loads a core skeleton instance.
  *
@@ -250,6 +281,22 @@ pub fn loadCoreAnimationFromSource(
     Ok(Rc::new(RefCell::new(CalCoreAnimation::new(
         duration, animations,
     ))))
+}
+
+//887
+/*****************************************************************************/
+/** Loads a core mesh instance.
+ *
+ * This function loads a core mesh instance from a data source.
+ *
+ * @param dataSrc The data source to load the core mesh instance from.
+ *
+ * @return One of the following values:
+ *         \li a pointer to the core mesh
+ *         \li \b 0 if an error happened
+ *****************************************************************************/
+fn loadCoreMeshFromSource(dataSrc: &mut dyn DataSource) -> Result<CalCoreMesh, LoaderError> {
+    todo!();
 }
 
 //953
