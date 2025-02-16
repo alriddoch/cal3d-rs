@@ -5,7 +5,7 @@ use crate::CalVector;
 
 use super::submesh::{CalCoreSubmesh, CalMorphTargetType, TextureCoordinate};
 
-struct BlendVertex {
+pub struct BlendVertex {
     position: CalVector<f32>,
     normal: CalVector<f32>,
     textureCoords: Vec<TextureCoordinate>,

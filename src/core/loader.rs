@@ -5,6 +5,8 @@ use std::ops::Mul;
 use std::path::PathBuf;
 use std::rc::Rc;
 
+use cgmath::InnerSpace;
+
 use crate::{CalQuaternion, CalVector};
 
 use super::animation::CalCoreAnimation;
@@ -14,6 +16,8 @@ use super::datasource::{DataSource, SourceError};
 use super::keyframe::CalCoreKeyframe;
 use super::mesh::CalCoreMesh;
 use super::skeleton::CalCoreSkeleton;
+use super::submesh::CalCoreSubmesh;
+use super::submorphtarget::CalCoreSubMorphTarget;
 use super::track::CalCoreTrack;
 use super::CoreError;
 
@@ -164,11 +168,11 @@ pub fn loadCoreMesh(filename: &PathBuf) -> Result<Rc<RefCell<CalCoreMesh>>, Load
 
     let mut source = BufReaderSource::new(buff_reader);
 
-    let coremesh = loadCoreMeshFromSource(&mut source);
+    let coremesh = loadCoreMeshFromSource(&mut source)?;
 
     //if(coremesh) coremesh->setFilename( strFilename );
 
-    Ok(coremesh)
+    Ok(Rc::new(RefCell::new(coremesh)))
 }
 /*****************************************************************************/
 /** Loads a core skeleton instance.
@@ -296,7 +300,31 @@ pub fn loadCoreAnimationFromSource(
  *         \li \b 0 if an error happened
  *****************************************************************************/
 fn loadCoreMeshFromSource(dataSrc: &mut dyn DataSource) -> Result<CalCoreMesh, LoaderError> {
-    todo!();
+    let mut magic: [u8; 4] = [0; 4];
+    let magic_len = magic.len();
+    dataSrc.readBytes(&mut magic, magic_len)?;
+    if &magic != MESH_FILE_MAGIC.as_slice() {
+        return Err(LoaderError::MagicError);
+    }
+
+    let version = dataSrc.readInteger()?;
+    if version < EARLIEST_COMPATIBLE_FILE_VERSION || version > CURRENT_FILE_VERSION {
+        return Err(LoaderError::VersionError);
+    }
+
+    let subMeshCount = dataSrc.readInteger()?;
+
+    let subMeshes = Vec::<CalCoreSubmesh>::new();
+
+    for i in 0..subMeshCount {
+        let pCoreSubmesh = loadCoreSubmesh(dataSrc, version)?;
+
+        subMeshes.push(pCoreSubmesh);
+    }
+
+    let pCoreMesh = CalCoreMesh::new(subMeshes);
+
+    Ok(pCoreMesh)
 }
 
 //953
@@ -577,6 +605,292 @@ pub fn loadCoreKeyframe(
     let pCoreKeyframe = CalCoreKeyframe::new(time, translation, rotation);
 
     Ok(pCoreKeyframe)
+}
+
+//1671
+/*****************************************************************************/
+/** Loads a core submesh instance.
+ *
+ * This function loads a core submesh instance from a data source.
+ *
+ * @param dataSrc The data source to load the core submesh instance from.
+ *
+ * @return One of the following values:
+ *         \li a pointer to the core submesh
+ *         \li \b 0 if an error happened
+ *****************************************************************************/
+fn loadCoreSubmesh(
+    dataSrc: &mut dyn DataSource,
+    version: i32,
+) -> Result<CalCoreSubmesh, LoaderError> {
+    use super::submesh::{Face, PhysicalProperty, Spring, TextureCoordinate};
+    use super::submorphtarget::BlendVertex;
+    use std::mem;
+
+    let hasVertexColors = (version >= FIRST_FILE_VERSION_WITH_VERTEX_COLORS);
+    let hasMorphTargetsInMorphFiles =
+        (version >= FIRST_FILE_VERSION_WITH_MORPH_TARGETS_IN_MORPH_FILES);
+
+    // get the material thread id of the submesh
+    let coreMaterialThreadId = dataSrc.readInteger()?;
+
+    // get the number of vertices, faces, level-of-details and springs
+    let vertexCount = dataSrc.readInteger()?;
+
+    let faceCount = dataSrc.readInteger()?;
+
+    let lodCount = dataSrc.readInteger()?;
+
+    let springCount = dataSrc.readInteger()?;
+
+    // get the number of texture coordinates per vertex
+    let textureCoordinateCount = dataSrc.readInteger()?;
+
+    let morphCount;
+    if hasMorphTargetsInMorphFiles {
+        morphCount = dataSrc.readInteger()?;
+    }
+
+    // allocate a new core submesh instance
+    let pCoreSubmesh = CalCoreSubmesh::new(
+        coreMaterialThreadId,
+        lodCount,
+        vertexCount,
+        textureCoordinateCount,
+        faceCount,
+        springCount,
+    );
+
+    // reserve memory for all the submesh data
+    // This is done insize ::new() in the Rust implementation
+    // pCoreSubmesh->reserve(vertexCount, textureCoordinateCount, faceCount, springCount);
+
+    // load the tangent space enable flags.
+
+    for textureCoordinateId in 0..textureCoordinateCount {
+        pCoreSubmesh.enableTangents(textureCoordinateId, false);
+    }
+
+    // load all vertices and their influences
+    pCoreSubmesh.setHasNonWhiteVertexColors(false);
+
+    let vertexVector = pCoreSubmesh.getVectorVertex();
+    for vertexId in 0..vertexCount {
+        let vertex = vertexVector[vertexId]; // REFERENCE
+
+        // load data of the vertex
+        vertex.position.x = dataSrc.readFloat()?;
+        vertex.position.y = dataSrc.readFloat()?;
+        vertex.position.z = dataSrc.readFloat()?;
+        vertex.normal.x = dataSrc.readFloat()?;
+        vertex.normal.y = dataSrc.readFloat()?;
+        vertex.normal.z = dataSrc.readFloat()?;
+        vertex.vertexColor.x = 1.0;
+        vertex.vertexColor.y = 1.0;
+        vertex.vertexColor.z = 1.0;
+        if hasVertexColors {
+            vertex.vertexColor.x = dataSrc.readFloat()?;
+            vertex.vertexColor.y = dataSrc.readFloat()?;
+            vertex.vertexColor.z = dataSrc.readFloat()?;
+            if vertex.vertexColor.x != 1.0
+                || vertex.vertexColor.y != 1.0
+                || vertex.vertexColor.z != 1.0
+            {
+                pCoreSubmesh.setHasNonWhiteVertexColors(true);
+            }
+        }
+        vertex.collapseId = dataSrc.readInteger()?;
+        vertex.faceCollapseCount = dataSrc.readInteger()?;
+
+        // load all texture coordinates of the vertex
+        for textureCoordinateId in 0..textureCoordinateCount {
+            let textureCoordinate =
+                TextureCoordinate::from_values(dataSrc.readFloat()?, dataSrc.readFloat()?);
+
+            // load data of the influence
+            if (loadingMode & LOADER_INVERT_V_COORD) != 0 {
+                textureCoordinate.v = 1.0 - textureCoordinate.v;
+            }
+
+            // set texture coordinate in the core submesh instance
+            pCoreSubmesh.setTextureCoordinate(vertexId, textureCoordinateId, textureCoordinate);
+        }
+
+        // get the number of influences
+        let influenceCount = dataSrc.readInteger()?;
+        if influenceCount < 0 {
+            return Err(LoaderError::FormatError(format!(
+                "Invalid influence count {influenceCount}"
+            )));
+        }
+
+        // reserve memory for the influences in the vertex
+        vertex.vectorInfluence.resize(influenceCount);
+
+        // load all influences of the vertex
+        for influenceId in 0..influenceCount {
+            // load data of the influence
+            vertex.vectorInfluence[influenceId].boneId = dataSrc.readInteger()?;
+            vertex.vectorInfluence[influenceId].weight = dataSrc.readFloat()?;
+        }
+
+        // set vertex in the core submesh instance
+        pCoreSubmesh.setVertex(vertexId, vertex);
+
+        // load the physical property of the vertex if there are springs in the core submesh
+        if springCount > 0 {
+            // load data of the physical property
+            let weight = dataSrc.readFloat()?;
+
+            let physicalProperty = PhysicalProperty::new(weight);
+
+            // set the physical property in the core submesh instance
+            pCoreSubmesh.setPhysicalProperty(vertexId, physicalProperty);
+        }
+    }
+
+    // load all springs
+    for springId in 0..springCount {
+        // load data of the spring
+        let id1 = dataSrc.readInteger()?;
+        let id2 = dataSrc.readInteger()?;
+        let springCoefficient = dataSrc.readFloat()?;
+        let idleLength = dataSrc.readFloat()?;
+
+        let spring = Spring::from_values([id1, id2], springCoefficient, idleLength);
+        // set spring in the core submesh instance
+        pCoreSubmesh.setSpring(springId, spring);
+    }
+
+    for morphId in 0..morphCount {
+        let morphTarget = CalCoreSubMorphTarget::new();
+
+        if !morphTarget.reserve(vertexCount) {
+            return Err(LoaderError::FormatError(format!("Unknown reserve error")));
+        }
+
+        let morphName = dataSrc.readString()?;
+        morphTarget.setName(morphName);
+
+        let cpt = 0;
+        let nbBlendVertex = dataSrc.readInteger()?;
+        if nbBlendVertex <= 0 {
+            return Err(LoaderError::FormatError(format!(
+                "Invalid nbBlendVertex {nbBlendVertex}"
+            )));
+        }
+
+        let blendVertId = dataSrc.readInteger()?;
+
+        for blendVertI in 0..vertexCount {
+            let Vertex = BlendVertex::new();
+            Vertex.textureCoords.clear();
+            Vertex.textureCoords.reserve(textureCoordinateCount);
+
+            let copyOrig = blendVertI < blendVertId;
+
+            if !copyOrig {
+                CalVectorFromDataSrc(dataSrc, &Vertex.position);
+                CalVectorFromDataSrc(dataSrc, &Vertex.normal);
+
+                for textureCoordinateId in 0..textureCoordinateCount {
+                    let textureCoordinate =
+                        TextureCoordinate::from_values(dataSrc.readFloat()?, dataSrc.readFloat()?);
+
+                    if loadingMode & LOADER_INVERT_V_COORD != 0 {
+                        textureCoordinate.v = 1.0 - textureCoordinate.v;
+                    }
+                    Vertex.textureCoords.push_back(textureCoordinate);
+                }
+
+                morphTarget.setBlendVertex(blendVertI, Vertex);
+                cpt += 1;
+                if cpt < nbBlendVertex {
+                    blendVertId = dataSrc.readInteger()?;
+                } else {
+                    blendVertId = vertexCount;
+                }
+            }
+        }
+        pCoreSubmesh.addCoreSubMorphTarget(morphTarget);
+    }
+
+    // load all faces
+    let justOnce = 0;
+    let flipModel = false;
+    for faceId in 0..faceCount {
+        // load data of the face
+
+        let tmp = [0; 3];
+        tmp[0] = dataSrc.readInteger()?;
+        tmp[1] = dataSrc.readInteger()?;
+        tmp[2] = dataSrc.readInteger()?;
+
+        if mem::size_of::<crate::CalIndex>() == 2 {
+            if (tmp[0] > 65535 || tmp[1] > 65535 || tmp[2] > 65535) {
+                return Err(LoaderError::FormatError(format!(
+                    "Invalid index in mesh face {faceId}: [{},{},{}]",
+                    tmp[0], tmp[1], tmp[2]
+                )));
+            }
+        }
+
+        let face = Face::new(tmp);
+
+        // check if left-handed coord system is used by the object
+        // can be done only once since the object has one system for all faces
+        if justOnce == 0 {
+            // get vertexes of first face
+            let vectorVertex = pCoreSubmesh.getVectorVertex();
+            let v1 = vectorVertex[tmp[0]];
+            let v2 = vectorVertex[tmp[1]];
+            let v3 = vectorVertex[tmp[2]];
+
+            let point1 = CalVector::<f32>::new(v1.position.x, v1.position.y, v1.position.z);
+            let point2 = CalVector::<f32>::new(v2.position.x, v2.position.y, v2.position.z);
+            let point3 = CalVector::<f32>::new(v3.position.x, v3.position.y, v3.position.z);
+
+            // gets vectors (v1-v2) and (v3-v2)
+            let vect1 = point1 - point2;
+            let vect2 = point3 - point2;
+
+            // calculates normal of face
+            let cross = CalVector::cross(vect1, vect2);
+            let crossLength = cross.magnitude();
+            if crossLength == 0.0 {
+                return Err(LoaderError::FormatError(format!("Face normal invalid")));
+            }
+            let faceNormal = cross / crossLength;
+
+            // compare the calculated normal with the normal of a vertex
+            let maxNorm = v1.normal;
+
+            // if the two vectors point to the same direction then the poly needs flipping
+            // so if the dot product > 0 it needs flipping
+            if (faceNormal * maxNorm > 0) {
+                flipModel = true;
+            }
+
+            // flip the winding order if the loading flags request it
+            if (loadingMode & LOADER_FLIP_WINDING) != 0 {
+                flipModel = !flipModel;
+            }
+
+            justOnce = 1;
+        }
+
+        // flip if needed
+        if (flipModel) {
+            let tmp = face.vertexId[1];
+            face.vertexId[1] = face.vertexId[2];
+            face.vertexId[2] = tmp;
+        }
+
+        // set face in the core submesh instance
+        pCoreSubmesh.setFace(faceId, face);
+    }
+
+    Ok(pCoreSubmesh)
 }
 
 //2051
