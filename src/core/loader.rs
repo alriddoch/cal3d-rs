@@ -135,6 +135,8 @@ pub fn loadCoreAnimation(
 
     let coreanim = loadCoreAnimationFromSource(&mut source, skel)?;
 
+    source.report_unused_bytes(filename);
+
     Ok(coreanim)
 }
 
@@ -165,7 +167,11 @@ pub fn loadCoreSkeleton(
 
     let mut source = BufReaderSource::new(buff_reader);
 
-    return loadCoreSkeletonFromSource(&mut source, skeleton);
+    loadCoreSkeletonFromSource(&mut source, skeleton)?;
+
+    source.report_unused_bytes(filename);
+
+    Ok(())
 }
 
 //552

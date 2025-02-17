@@ -1,5 +1,6 @@
 use std::fs;
 use std::io::{BufReader, Read};
+use std::path::PathBuf;
 
 use byteorder::{NativeEndian, ReadBytesExt};
 
@@ -14,6 +15,15 @@ pub struct BufReaderSource {
 impl BufReaderSource {
     pub fn new(reader: BufReader<fs::File>) -> Self {
         BufReaderSource { reader }
+    }
+
+    pub fn report_unused_bytes(&mut self, filename: &PathBuf) {
+        let mut buf: Vec<u8> = Vec::new();
+        if let Ok(remaining) = self.reader.read_to_end(&mut buf) {
+            if remaining > 0 {
+                println!("Warning: {} bytes left after loading {filename:?}", remaining);
+            }
+        }
     }
 }
 
