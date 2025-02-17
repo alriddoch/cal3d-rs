@@ -12,7 +12,7 @@ use crate::{CalQuaternion, CalVector};
 use super::animation::CalCoreAnimation;
 use super::bone::{CalCoreBone, CalLightType};
 use super::bufreadersource::BufReaderSource;
-use super::datasource::{DataSource, SourceError};
+use super::datasource::{CalVectorFromDataSrc, DataSource, SourceError};
 use super::keyframe::CalCoreKeyframe;
 use super::mesh::CalCoreMesh;
 use super::skeleton::CalCoreSkeleton;
@@ -672,7 +672,6 @@ fn loadCoreSubmesh(
     // pCoreSubmesh->reserve(vertexCount, textureCoordinateCount, faceCount, springCount);
 
     // load the tangent space enable flags.
-
     for textureCoordinateId in 0..textureCoordinateCount {
         pCoreSubmesh.enableTangents(textureCoordinateId, false);
     }
@@ -796,8 +795,8 @@ fn loadCoreSubmesh(
             let copyOrig = blendVertI < blendVertId;
 
             if !copyOrig {
-                CalVectorFromDataSrc(dataSrc, &Vertex.position);
-                CalVectorFromDataSrc(dataSrc, &Vertex.normal);
+                Vertex.postion = CalVectorFromDataSrc(dataSrc);
+                Vertex.normal = CalVectorFromDataSrc(dataSrc);
 
                 for textureCoordinateId in 0..textureCoordinateCount {
                     let textureCoordinate =

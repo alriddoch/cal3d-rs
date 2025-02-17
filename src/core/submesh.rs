@@ -1,3 +1,5 @@
+use cgmath::InnerSpace;
+
 use crate::{CalIndex, CalVector};
 
 use super::submorphtarget::CalCoreSubMorphTarget;
@@ -157,5 +159,115 @@ impl CalCoreSubmesh {
             m_lodCount,
             ..Default::default()
         }
+    }
+
+    //165
+    /*****************************************************************************/
+    /** UpdateTangentVector
+     *
+     *****************************************************************************/
+
+    fn UpdateTangentVector(&mut self, v0: i32, v1: i32, v2: i32, mapId: usize) {
+        let vvtx = self.getVectorVertex();
+        let vtex = &self.m_vectorvectorTextureCoordinate[mapId];
+
+        let v0 = v0 as usize;
+        let v1 = v1 as usize;
+        let v2 = v2 as usize;
+
+        // Step 1. Compute the approximate tangent vector.
+        let du1 = vtex[v1].u - vtex[v0].u;
+        let dv1 = vtex[v1].v - vtex[v0].v;
+        let du2 = vtex[v2].u - vtex[v0].u;
+        let dv2 = vtex[v2].v - vtex[v0].v;
+
+        let prod1 = (du1 * dv2 - dv1 * du2);
+        let prod2 = (du2 * dv1 - dv2 * du1);
+        if (((prod1.abs()) < 0.000001) || ((prod2.abs()) < 0.000001)) {
+            return;
+        }
+
+        let x = dv2 / prod1;
+        let y = dv1 / prod2;
+
+        let vec1 = vvtx[v1].position - vvtx[v0].position;
+        let vec2 = vvtx[v2].position - vvtx[v0].position;
+        let mut tangent = (vec1 * x) + (vec2 * y);
+
+        // Step 2. Orthonormalize the tangent.
+        let component = CalVector::dot(tangent, vvtx[v0].normal);
+        tangent -= &vvtx[v0].normal * component;
+        tangent.normalize();
+
+        // Step 3: Add the estimated tangent to the overall estimate for the vertex.
+
+        self.m_vectorvectorTangentSpace[mapId][v0].tangent += tangent;
+    }
+
+    /*****************************************************************************/
+    /** Enables (and calculates) or disables the storage of tangent spaces.
+     *
+     * This function enables or disables the storage of tangent space bases.
+     *****************************************************************************/
+    pub fn enableTangents(&mut self, mapId: usize, enabled: bool) -> bool {
+        if (mapId < 0) || (mapId >= self.m_vectorTangentsEnabled.len()) {
+            return false;
+        }
+
+        self.m_vectorTangentsEnabled[mapId] = enabled;
+
+        if (!enabled) {
+            self.m_vectorvectorTangentSpace[mapId].clear();
+            return true;
+        }
+
+        self.m_vectorvectorTangentSpace[mapId].reserve(self.m_vectorVertex.len());
+        self.m_vectorvectorTangentSpace[mapId].resize(self.m_vectorVertex.len());
+
+        for tangentId in 0..self.m_vectorvectorTangentSpace[mapId].len() {
+            self.m_vectorvectorTangentSpace[mapId][tangentId].tangent = CalVector(0.0f, 0.0f, 0.0f);
+            self.m_vectorvectorTangentSpace[mapId][tangentId].crossFactor = 1;
+        }
+
+        for faceId in 0..self.m_vectorFace.len() {
+            self.UpdateTangentVector(
+                self.m_vectorFace[faceId].vertexId[0],
+                self.m_vectorFace[faceId].vertexId[1],
+                self.m_vectorFace[faceId].vertexId[2],
+                mapId,
+            );
+            self.UpdateTangentVector(
+                self.m_vectorFace[faceId].vertexId[1],
+                self.m_vectorFace[faceId].vertexId[2],
+                self.m_vectorFace[faceId].vertexId[0],
+                mapId,
+            );
+            self.UpdateTangentVector(
+                self.m_vectorFace[faceId].vertexId[2],
+                self.m_vectorFace[faceId].vertexId[0],
+                self.m_vectorFace[faceId].vertexId[1],
+                mapId,
+            );
+        }
+
+        for tangentId in 0..self.m_vectorvectorTangentSpace[mapId].len() {
+            self.m_vectorvectorTangentSpace[mapId][tangentId]
+                .tangent
+                .normalize();
+        }
+
+        return true;
+    }
+
+    /*****************************************************************************/
+    /** Returns the vertex vector.
+     *
+     * This function returns the vector that contains all vertices of the core
+     * submesh instance.
+     *
+     * @return A reference to the vertex vector.
+     *****************************************************************************/
+    pub fn getVectorVertex(&self) -> &Vec<Vertex> {
+        &self.m_vectorVertex
     }
 }
