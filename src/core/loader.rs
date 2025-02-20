@@ -7,6 +7,7 @@ use std::rc::Rc;
 
 use cgmath::InnerSpace;
 
+use crate::core::submesh::Influence;
 use crate::{CalQuaternion, CalVector};
 
 use super::animation::CalCoreAnimation;
@@ -641,16 +642,16 @@ fn loadCoreSubmesh(
     let coreMaterialThreadId = dataSrc.readInteger()?;
 
     // get the number of vertices, faces, level-of-details and springs
-    let vertexCount = dataSrc.readInteger()?;
+    let vertexCount = dataSrc.readInteger()? as usize;
 
-    let faceCount = dataSrc.readInteger()?;
+    let faceCount = dataSrc.readInteger()? as usize;
 
     let lodCount = dataSrc.readInteger()?;
 
-    let springCount = dataSrc.readInteger()?;
+    let springCount = dataSrc.readInteger()? as usize;
 
     // get the number of texture coordinates per vertex
-    let textureCoordinateCount = dataSrc.readInteger()?;
+    let textureCoordinateCount = dataSrc.readInteger()? as usize;
 
     let morphCount;
     if hasMorphTargetsInMorphFiles {
@@ -679,9 +680,9 @@ fn loadCoreSubmesh(
     // load all vertices and their influences
     pCoreSubmesh.setHasNonWhiteVertexColors(false);
 
-    let vertexVector = pCoreSubmesh.getVectorVertex();
+    let vertexVector = pCoreSubmesh.getVectorVertexMut();
     for vertexId in 0..vertexCount {
-        let vertex = vertexVector[vertexId]; // REFERENCE
+        let vertex = vertexVector.get_mut(vertexId).unwrap(); // REFERENCE
 
         // load data of the vertex
         vertex.position.x = dataSrc.readFloat()?;
@@ -728,9 +729,10 @@ fn loadCoreSubmesh(
                 "Invalid influence count {influenceCount}"
             )));
         }
+        let influenceCount = influenceCount as usize;
 
         // reserve memory for the influences in the vertex
-        vertex.vectorInfluence.resize(influenceCount);
+        vertex.vectorInfluence.resize(influenceCount, Influence::default());
 
         // load all influences of the vertex
         for influenceId in 0..influenceCount {

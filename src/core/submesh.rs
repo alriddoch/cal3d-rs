@@ -43,10 +43,10 @@ impl Default for TangentSpace {
     }
 }
 
-#[derive(Clone)]
+#[derive(Clone, Default)]
 pub struct Influence {
-    boneId: i32,
-    weight: f32,
+    pub boneId: i32,
+    pub weight: f32,
 }
 
 #[derive(Clone, Default)]
@@ -62,12 +62,12 @@ impl PhysicalProperty {
 
 #[derive(Clone)]
 pub struct Vertex {
-    position: CalVector<f32>,
-    normal: CalVector<f32>,
-    vectorInfluence: Vec<Influence>,
-    collapseId: i32,
-    faceCollapseCount: i32,
-    vertexColor: CalVector<f32>,
+    pub position: CalVector<f32>,
+    pub normal: CalVector<f32>,
+    pub vectorInfluence: Vec<Influence>,
+    pub collapseId: i32,
+    pub faceCollapseCount: i32,
+    pub vertexColor: CalVector<f32>,
 }
 
 impl Default for Vertex {
@@ -132,33 +132,34 @@ impl CalCoreSubmesh {
     pub fn new(
         m_coreMaterialThreadId: i32,
         m_lodCount: i32,
-        vertexCount: i32,
-        textureCoordinateCount: i32,
-        faceCount: i32,
-        springCount: i32,
+        vertexCount: usize,
+        textureCoordinateCount: usize,
+        faceCount: usize,
+        springCount: usize,
     ) -> Self {
         CalCoreSubmesh {
-            m_vectorVertex: vec![Vertex::default(); vertexCount as usize],
-            m_vectorTangentsEnabled: vec![false; textureCoordinateCount as usize],
+            m_vectorVertex: vec![Vertex::default(); vertexCount],
+            m_vectorTangentsEnabled: vec![false; textureCoordinateCount],
             m_vectorvectorTangentSpace: vec![
-                vec![TangentSpace::default(); vertexCount as usize];
-                textureCoordinateCount as usize
+                vec![TangentSpace::default(); vertexCount];
+                textureCoordinateCount
             ],
             m_vectorvectorTextureCoordinate: vec![
-                vec![
-                    TextureCoordinate::default();
-                    vertexCount as usize
-                ];
-                textureCoordinateCount as usize
+                vec![TextureCoordinate::default(); vertexCount];
+                textureCoordinateCount
             ],
-            m_vectorFace: vec![Face::default(); faceCount as usize],
-            m_vectorSpring: vec![Spring::default(); springCount as usize],
-            m_vectorPhysicalProperty: vec![PhysicalProperty::default(); vertexCount as usize],
+            m_vectorFace: vec![Face::default(); faceCount],
+            m_vectorSpring: vec![Spring::default(); springCount],
+            m_vectorPhysicalProperty: vec![PhysicalProperty::default(); vertexCount],
 
             m_coreMaterialThreadId,
             m_lodCount,
             ..Default::default()
         }
+    }
+
+    pub fn setHasNonWhiteVertexColors(&mut self, v: bool) {
+        self.m_hasNonWhiteVertexColors = true;
     }
 
     //165
@@ -259,6 +260,43 @@ impl CalCoreSubmesh {
         return true;
     }
 
+    //636
+    /*****************************************************************************/
+    /** Sets a specified texture coordinate.
+     *
+     * This function sets a specified texture coordinate in the core submesh
+     * instance.
+     *
+     * @param vertexId  The ID of the vertex.
+     * @param textureCoordinateId  The ID of the texture coordinate.
+     * @param textureCoordinate The texture coordinate that should be set.
+     *
+     * @return One of the following values:
+     *         \li \b true if successful
+     *         \li \b false if an error happened
+     *****************************************************************************/
+    pub fn setTextureCoordinate(
+        &mut self,
+        vertexId: usize,
+        textureCoordinateId: usize,
+        textureCoordinate: TextureCoordinate,
+    ) -> bool {
+        if (textureCoordinateId < 0)
+            || (textureCoordinateId >= self.m_vectorvectorTextureCoordinate.len())
+        {
+            return false;
+        }
+        if (vertexId < 0)
+            || (vertexId >= self.m_vectorvectorTextureCoordinate[textureCoordinateId].len())
+        {
+            return false;
+        }
+
+        self.m_vectorvectorTextureCoordinate[textureCoordinateId][vertexId] = textureCoordinate;
+
+        return true;
+    }
+
     /*****************************************************************************/
     /** Returns the vertex vector.
      *
@@ -269,5 +307,9 @@ impl CalCoreSubmesh {
      *****************************************************************************/
     pub fn getVectorVertex(&self) -> &Vec<Vertex> {
         &self.m_vectorVertex
+    }
+
+    pub fn getVectorVertexMut(&mut self) -> &mut Vec<Vertex> {
+        &mut self.m_vectorVertex
     }
 }
