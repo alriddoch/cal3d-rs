@@ -4,7 +4,9 @@ use crate::{CalIndex, CalVector};
 
 use super::submorphtarget::CalCoreSubMorphTarget;
 
+#[derive(Default)]
 pub enum CalMorphTargetType {
+    #[default]
     CalMorphTargetTypeNull = 0,
     CalMorphTargetTypeAdditive,
     CalMorphTargetTypeClamped,
@@ -256,6 +258,56 @@ impl CalCoreSubmesh {
                 .tangent
                 .normalize();
         }
+
+        return true;
+    }
+
+    //591
+    /*****************************************************************************/
+    /** Sets a specified physical property.
+     *
+     * This function sets a specified physical property in the core submesh
+     * instance.
+     *
+     * @param vertexId  The ID of the vertex.
+     * @param physicalProperty The physical property that should be set.
+     *
+     * @return One of the following values:
+     *         \li \b true if successful
+     *         \li \b false if an error happened
+     *****************************************************************************/
+    pub fn setPhysicalProperty(
+        &mut self,
+        vertexId: usize,
+        physicalProperty: PhysicalProperty,
+    ) -> bool {
+        if (vertexId < 0) || (vertexId >= self.m_vectorPhysicalProperty.len()) {
+            return false;
+        }
+
+        self.m_vectorPhysicalProperty[vertexId] = physicalProperty;
+
+        return true;
+    }
+
+    /*****************************************************************************/
+    /** Sets a specified spring.
+     *
+     * This function sets a specified spring in the core submesh instance.
+     *
+     * @param springId  The ID of the spring.
+     * @param spring The spring that should be set.
+     *
+     * @return One of the following values:
+     *         \li \b true if successful
+     *         \li \b false if an error happened
+     *****************************************************************************/
+    pub fn setSpring(&mut self, springId: usize, spring: Spring) -> bool {
+        if (springId < 0) || (springId >= self.m_vectorSpring.len()) {
+            return false;
+        }
+
+        self.m_vectorSpring[springId] = spring;
 
         return true;
     }

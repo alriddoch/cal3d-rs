@@ -659,14 +659,16 @@ fn loadCoreSubmesh(
     }
 
     // allocate a new core submesh instance
-    let pCoreSubmesh = CalCoreSubmesh::new(
+    let CoreSubmesh = Rc::new(RefCell::new(CalCoreSubmesh::new(
         coreMaterialThreadId,
         lodCount,
         vertexCount,
         textureCoordinateCount,
         faceCount,
         springCount,
-    );
+    )));
+
+    let pCoreSubmesh = CoreSubmesh.borrow_mut();
 
     // reserve memory for all the submesh data
     // This is done insize ::new() in the Rust implementation
@@ -742,7 +744,8 @@ fn loadCoreSubmesh(
         }
 
         // set vertex in the core submesh instance
-        pCoreSubmesh.setVertex(vertexId, vertex);
+        // FIXME: This shouldn't need to be done. The vertex is being modified by reference.
+        // pCoreSubmesh.setVertex(vertexId, vertex);
 
         // load the physical property of the vertex if there are springs in the core submesh
         if springCount > 0 {
@@ -770,14 +773,14 @@ fn loadCoreSubmesh(
     }
 
     for morphId in 0..morphCount {
-        let morphTarget = CalCoreSubMorphTarget::new();
-
-        if !morphTarget.reserve(vertexCount) {
-            return Err(LoaderError::FormatError(format!("Unknown reserve error")));
-        }
+        // if !morphTarget.reserve(vertexCount) {
+        //     return Err(LoaderError::FormatError(format!("Unknown reserve error")));
+        // }
 
         let morphName = dataSrc.readString()?;
-        morphTarget.setName(morphName);
+        // morphTarget.setName(morphName);
+
+        let morphTarget = CalCoreSubMorphTarget::new(CoreSubmesh.clone(),vertexCount, morphName);
 
         let cpt = 0;
         let nbBlendVertex = dataSrc.readInteger()?;
@@ -787,18 +790,16 @@ fn loadCoreSubmesh(
             )));
         }
 
-        let blendVertId = dataSrc.readInteger()?;
+        let blendVertId = dataSrc.readInteger()? as usize;
 
         for blendVertI in 0..vertexCount {
-            let Vertex = BlendVertex::new();
-            Vertex.textureCoords.clear();
-            Vertex.textureCoords.reserve(textureCoordinateCount);
+            let Vertex = BlendVertex::new(textureCoordinateCount);
 
             let copyOrig = blendVertI < blendVertId;
 
             if !copyOrig {
-                Vertex.postion = CalVectorFromDataSrc(dataSrc);
-                Vertex.normal = CalVectorFromDataSrc(dataSrc);
+                Vertex.position = CalVectorFromDataSrc(dataSrc)?;
+                Vertex.normal = CalVectorFromDataSrc(dataSrc)?;
 
                 for textureCoordinateId in 0..textureCoordinateCount {
                     let textureCoordinate =
@@ -807,18 +808,19 @@ fn loadCoreSubmesh(
                     if loadingMode & LOADER_INVERT_V_COORD != 0 {
                         textureCoordinate.v = 1.0 - textureCoordinate.v;
                     }
-                    Vertex.textureCoords.push_back(textureCoordinate);
+                    Vertex.textureCoords.push(textureCoordinate);
                 }
 
                 morphTarget.setBlendVertex(blendVertI, Vertex);
                 cpt += 1;
                 if cpt < nbBlendVertex {
-                    blendVertId = dataSrc.readInteger()?;
+                    blendVertId = dataSrc.readInteger()? as usize;
                 } else {
                     blendVertId = vertexCount;
                 }
             }
         }
+        // TODO: Don't setCoreSubmesh in this function, as it's assigned at morphTarget creation.
         pCoreSubmesh.addCoreSubMorphTarget(morphTarget);
     }
 
