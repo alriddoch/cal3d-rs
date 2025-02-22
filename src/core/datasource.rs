@@ -32,8 +32,8 @@ pub trait DataSource {
 }
 
 pub fn CalVectorFromDataSrc(dataSrc: &mut dyn DataSource) -> Result<CalVector<f32>, SourceError> {
-   let x = dataSrc.readFloat()?;
-   let y =dataSrc.readFloat()?;
-   let z =dataSrc.readFloat()?;
-   Ok(CalVector::new(x,y,z))
+    let x = dataSrc.readFloat()?;
+    let y = dataSrc.readFloat()?;
+    let z = dataSrc.readFloat()?;
+    Ok(CalVector::new(x, y, z))
 }
