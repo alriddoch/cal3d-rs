@@ -4,6 +4,7 @@ use std::rc::Rc;
 
 use super::animation::CalCoreAnimation;
 use super::loader;
+use super::mesh::CalCoreMesh;
 use super::skeleton::CalCoreSkeleton;
 
 #[derive(Debug)]
@@ -17,8 +18,7 @@ pub struct CalCoreModel {
     pCoreSkeleton: Rc<RefCell<CalCoreSkeleton>>,
     m_vectorCoreAnimation: Vec<Rc<RefCell<CalCoreAnimation>>>,
     // std::vector<CalCoreAnimatedMorph *>   m_vectorCoreAnimatedMorph;
-
-    // std::vector<CalCoreMeshPtr>           m_vectorCoreMesh;
+    m_vectorCoreMesh: Vec<Rc<RefCell<CalCoreMesh>>>,
     // std::vector<CalCoreMeshPtr>           m_vectorMorphMesh;
     // std::vector<CalCoreMaterialPtr>       m_vectorCoreMaterial;
     // std::map<int, std::map<int, int> >    m_mapmapCoreMaterialThread;
@@ -31,6 +31,7 @@ pub struct CalCoreModel {
 }
 
 impl CalCoreModel {
+    //112
     /*****************************************************************************/
     /** Adds a core animation.
      *
@@ -40,7 +41,6 @@ impl CalCoreModel {
      *
      * @return \li the assigned animation \b ID of the added core animation
      *****************************************************************************/
-
     fn addCoreAnimation(&mut self, pCoreAnimation: Rc<RefCell<CalCoreAnimation>>) -> i32 {
         let num = self.m_vectorCoreAnimation.len();
 
@@ -56,22 +56,31 @@ impl CalCoreModel {
         num as i32
     }
 
-    //1404
+    //325
     /*****************************************************************************/
-    /** Loads the core skeleton.
+    /** Adds a core mesh.
      *
-     * This function loads the core skeleton from a file.
+     * This function adds a core mesh to the core model instance.
      *
-     * @param strFilename The file from which the core skeleton should be loaded
-     *                    from.
+     * @param pCoreMesh A pointer to the core mesh that should be added.
      *
      * @return One of the following values:
-     *         \li \b true if successful
-     *         \li \b false if an error happened
+     *         \li the assigned mesh \b ID of the added core material
+     *         \li \b -1 if an error happened
      *****************************************************************************/
-    pub fn loadCoreSkeleton(&mut self, filename: &PathBuf) -> Result<(), loader::LoaderError> {
-        loader::loadCoreSkeleton(filename, &self.pCoreSkeleton)?;
-        Ok(())
+    pub fn addCoreMesh(&mut self, pCoreMesh: Rc<RefCell<CalCoreMesh>>) -> usize {
+        let num = self.m_vectorCoreMesh.len();
+
+        // FIXME: Can Rc be null in Rust? No. Unclear if this is necessary for now.
+        //   for  i in 0..num  {
+        //      if( !self.m_vectorCoreMesh[ i ] )     {
+        //         self.m_vectorCoreMesh[ i ] = pCoreMesh;
+        //         return i;
+        //      }
+        //   }
+
+        self.m_vectorCoreMesh.push(pCoreMesh);
+        return num;
     }
 
     //659
@@ -102,6 +111,11 @@ impl CalCoreModel {
         Ok(self.addCoreAnimation(pCoreAnimation))
     }
 
+    pub fn loadCoreMaterial(&mut self, filename: &PathBuf) -> Result<(), CoreError> {
+        todo!();
+        Ok(())
+    }
+
     //1211
     /*****************************************************************************/
     /** Loads a core mesh.
@@ -114,7 +128,7 @@ impl CalCoreModel {
      *         \li the assigned \b ID of the loaded core mesh
      *         \li \b -1 if an error happened
      *****************************************************************************/
-    pub fn loadCoreMesh(&mut self, filename: &PathBuf) -> Result<i32, CoreError> {
+    pub fn loadCoreMesh(&mut self, filename: &PathBuf) -> Result<usize, loader::LoaderError> {
         // FIXME Check if skeleton has been loaded.
         // the core skeleton has to be loaded already
         //   if(!m_pCoreSkeleton)  {
@@ -127,8 +141,21 @@ impl CalCoreModel {
         Ok(self.addCoreMesh(pCoreMesh))
     }
 
-    pub fn loadCoreMaterial(&mut self, filename: &PathBuf) -> Result<(), CoreError> {
-        todo!();
+    //1404
+    /*****************************************************************************/
+    /** Loads the core skeleton.
+     *
+     * This function loads the core skeleton from a file.
+     *
+     * @param strFilename The file from which the core skeleton should be loaded
+     *                    from.
+     *
+     * @return One of the following values:
+     *         \li \b true if successful
+     *         \li \b false if an error happened
+     *****************************************************************************/
+    pub fn loadCoreSkeleton(&mut self, filename: &PathBuf) -> Result<(), loader::LoaderError> {
+        loader::loadCoreSkeleton(filename, &self.pCoreSkeleton)?;
         Ok(())
     }
 }

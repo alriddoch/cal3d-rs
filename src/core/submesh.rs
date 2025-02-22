@@ -377,6 +377,10 @@ impl CalCoreSubmesh {
         return true;
     }
 
+    pub fn setAllTextureCoordinates(&mut self, texture_coordinates: Vec<Vec<TextureCoordinate>>) {
+        self.m_vectorvectorTextureCoordinate = texture_coordinates;
+    }
+
     //683
     /*****************************************************************************/
     /** Adds a core sub morph target.

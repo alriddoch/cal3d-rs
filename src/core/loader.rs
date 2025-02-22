@@ -97,20 +97,6 @@ impl From<CoreError> for LoaderError {
     }
 }
 
-fn CalVectorFromDataSrc(dataSrc: &mut dyn DataSource) -> Result<CalVector<f32>, LoaderError> {
-    let mut v = CalVector::<f32> {
-        x: 0.0,
-        y: 0.0,
-        z: 0.0,
-    };
-
-    v.x = dataSrc.readFloat()?;
-    v.y = dataSrc.readFloat()?;
-    v.z = dataSrc.readFloat()?;
-
-    Ok(v)
-}
-
 //115
 /*****************************************************************************/
 /** Loads a core animation instance.
@@ -172,6 +158,8 @@ pub fn loadCoreMesh(filename: &PathBuf) -> Result<Rc<RefCell<CalCoreMesh>>, Load
     let mut source = BufReaderSource::new(buff_reader);
 
     let coremesh = loadCoreMeshFromSource(&mut source)?;
+
+    source.report_unused_bytes(filename);
 
     //if(coremesh) coremesh->setFilename( strFilename );
 
@@ -321,7 +309,7 @@ fn loadCoreMeshFromSource(dataSrc: &mut dyn DataSource) -> Result<CalCoreMesh, L
 
     let subMeshCount = dataSrc.readInteger()?;
 
-    let subMeshes = Vec::<CalCoreSubmesh>::new();
+    let mut subMeshes = Vec::new();
 
     for i in 0..subMeshCount {
         let pCoreSubmesh = loadCoreSubmesh(dataSrc, version)?;
@@ -653,20 +641,22 @@ fn loadCoreSubmesh(
     // get the number of texture coordinates per vertex
     let textureCoordinateCount = dataSrc.readInteger()? as usize;
 
-    let morphCount;
+    let mut morphCount = 0;
     if hasMorphTargetsInMorphFiles {
-        morphCount = dataSrc.readInteger()?;
+        morphCount = dataSrc.readInteger()? as usize;
     }
 
     // allocate a new core submesh instance
-    let CoreSubmesh = Rc::new(RefCell::new(CalCoreSubmesh::new(
+    let mut pCoreSubmesh = CalCoreSubmesh::new(
         coreMaterialThreadId,
         lodCount,
         vertexCount,
         textureCoordinateCount,
         faceCount,
         springCount,
-    )));
+    );
+
+    let CoreSubmesh = Rc::new(RefCell::new(pCoreSubmesh));
 
     let mut pCoreSubmesh = CoreSubmesh.borrow_mut();
 
@@ -682,9 +672,11 @@ fn loadCoreSubmesh(
     // load all vertices and their influences
     let mut has_non_white_vertex_colors = false;
 
-    let vertexVector = pCoreSubmesh.getVectorVertexMut();
+    let mut textureCoordinates: Vec<Vec<TextureCoordinate>> = Vec::new();
+
+    // let vertexVector =
     for vertexId in 0..vertexCount {
-        let vertex = vertexVector.get_mut(vertexId).unwrap(); // REFERENCE
+        let vertex = pCoreSubmesh.getVectorVertexMut().get_mut(vertexId).unwrap(); // REFERENCE
 
         // load data of the vertex
         vertex.position.x = dataSrc.readFloat()?;
@@ -720,8 +712,11 @@ fn loadCoreSubmesh(
                 textureCoordinate.v = 1.0 - textureCoordinate.v;
             }
 
+            textureCoordinates[textureCoordinateId][vertexId] = textureCoordinate;
+
+            // Can't set them while vertex is in scope, as unable to borrow another mut reference.
             // set texture coordinate in the core submesh instance
-            pCoreSubmesh.setTextureCoordinate(vertexId, textureCoordinateId, textureCoordinate);
+            // pCoreSubmesh.setTextureCoordinate(vertexId, textureCoordinateId, textureCoordinate);
         }
 
         // get the number of influences
@@ -734,7 +729,9 @@ fn loadCoreSubmesh(
         let influenceCount = influenceCount as usize;
 
         // reserve memory for the influences in the vertex
-        vertex.vectorInfluence.resize(influenceCount, Influence::default());
+        vertex
+            .vectorInfluence
+            .resize(influenceCount, Influence::default());
 
         // load all influences of the vertex
         for influenceId in 0..influenceCount {
@@ -758,6 +755,7 @@ fn loadCoreSubmesh(
             pCoreSubmesh.setPhysicalProperty(vertexId, physicalProperty);
         }
     }
+    pCoreSubmesh.setAllTextureCoordinates(textureCoordinates);
 
     pCoreSubmesh.setHasNonWhiteVertexColors(has_non_white_vertex_colors);
 
@@ -782,9 +780,10 @@ fn loadCoreSubmesh(
         let morphName = dataSrc.readString()?;
         // morphTarget.setName(morphName);
 
-        let morphTarget = CalCoreSubMorphTarget::new(CoreSubmesh.clone(),vertexCount, morphName);
+        let mut morphTarget =
+            CalCoreSubMorphTarget::new(CoreSubmesh.clone(), vertexCount, morphName);
 
-        let cpt = 0;
+        let mut cpt = 0;
         let nbBlendVertex = dataSrc.readInteger()?;
         if nbBlendVertex <= 0 {
             return Err(LoaderError::FormatError(format!(
@@ -792,10 +791,10 @@ fn loadCoreSubmesh(
             )));
         }
 
-        let blendVertId = dataSrc.readInteger()? as usize;
+        let mut blendVertId = dataSrc.readInteger()? as usize;
 
         for blendVertI in 0..vertexCount {
-            let Vertex = BlendVertex::new(textureCoordinateCount);
+            let mut Vertex = BlendVertex::new(textureCoordinateCount);
 
             let copyOrig = blendVertI < blendVertId;
 
@@ -804,7 +803,7 @@ fn loadCoreSubmesh(
                 Vertex.normal = CalVectorFromDataSrc(dataSrc)?;
 
                 for textureCoordinateId in 0..textureCoordinateCount {
-                    let textureCoordinate =
+                    let mut textureCoordinate =
                         TextureCoordinate::from_values(dataSrc.readFloat()?, dataSrc.readFloat()?);
 
                     if loadingMode & LOADER_INVERT_V_COORD != 0 {
@@ -846,7 +845,7 @@ fn loadCoreSubmesh(
             }
         }
 
-        let face = Face::new(tmp);
+        let mut face = Face::new(tmp);
 
         // check if left-handed coord system is used by the object
         // can be done only once since the object has one system for all faces
