@@ -38,7 +38,7 @@ pub struct CalCoreSubMorphTarget {
     m_name: String,
     m_vectorBlendVertex: Vec<BlendVertex>,
     m_coreSubmesh: Rc<RefCell<CalCoreSubmesh>>,
-    m_morphTargetID: u32,
+    m_morphTargetID: usize,
     m_morphTargetType: CalMorphTargetType,
 }
 
@@ -55,5 +55,45 @@ impl CalCoreSubMorphTarget {
             m_morphTargetID: 0,
             m_morphTargetType: CalMorphTargetType::CalMorphTargetTypeAdditive,
         }
+    }
+
+    pub fn setMorphID(&mut self, i: usize){ self.m_morphTargetID = i; }
+
+    //120
+    /*****************************************************************************/
+    /** Sets a specified blend vertex.
+     *
+     * This function sets a specified blend vertex in the core sub morph target instance.
+     *
+     * @param vertexId  The ID of the vertex.
+     * @param vertex The vertex that should be set.
+     *
+     * @return One of the following values:
+     *         \li \b true if successful
+     *         \li \b false if an error happened
+     *****************************************************************************/
+    pub fn setBlendVertex(&mut self, blendVertexId: usize, blendVertex: &BlendVertex) -> bool {
+        if (blendVertexId < 0) || (blendVertexId >= self.m_vectorBlendVertex.len()) {
+            return false;
+        }
+
+        /*  if( self.m_vectorBlendVertex[blendVertexId] == NULL ) {
+          self.m_vectorBlendVertex[blendVertexId] = new BlendVertex();
+        }*/
+        self.m_vectorBlendVertex[blendVertexId].position = blendVertex.position;
+        self.m_vectorBlendVertex[blendVertexId].normal = blendVertex.normal;
+        self.m_vectorBlendVertex[blendVertexId]
+            .textureCoords
+            .clear();
+        self.m_vectorBlendVertex[blendVertexId]
+            .textureCoords
+            .reserve(blendVertex.textureCoords.len());
+        for tcI in 0..blendVertex.textureCoords.len() {
+            self.m_vectorBlendVertex[blendVertexId]
+                .textureCoords
+                .push(blendVertex.textureCoords[tcI].clone());
+        }
+
+        return true;
     }
 }

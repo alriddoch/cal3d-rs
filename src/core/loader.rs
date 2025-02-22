@@ -629,7 +629,7 @@ pub fn loadCoreKeyframe(
 fn loadCoreSubmesh(
     dataSrc: &mut dyn DataSource,
     version: i32,
-) -> Result<CalCoreSubmesh, LoaderError> {
+) -> Result<Rc<RefCell<CalCoreSubmesh>>, LoaderError> {
     use super::submesh::{Face, PhysicalProperty, Spring, TextureCoordinate};
     use super::submorphtarget::BlendVertex;
     use std::mem;
@@ -668,7 +668,7 @@ fn loadCoreSubmesh(
         springCount,
     )));
 
-    let pCoreSubmesh = CoreSubmesh.borrow_mut();
+    let mut pCoreSubmesh = CoreSubmesh.borrow_mut();
 
     // reserve memory for all the submesh data
     // This is done insize ::new() in the Rust implementation
@@ -680,7 +680,7 @@ fn loadCoreSubmesh(
     }
 
     // load all vertices and their influences
-    pCoreSubmesh.setHasNonWhiteVertexColors(false);
+    let mut has_non_white_vertex_colors = false;
 
     let vertexVector = pCoreSubmesh.getVectorVertexMut();
     for vertexId in 0..vertexCount {
@@ -704,7 +704,7 @@ fn loadCoreSubmesh(
                 || vertex.vertexColor.y != 1.0
                 || vertex.vertexColor.z != 1.0
             {
-                pCoreSubmesh.setHasNonWhiteVertexColors(true);
+                has_non_white_vertex_colors = true;
             }
         }
         vertex.collapseId = dataSrc.readInteger()?;
@@ -712,7 +712,7 @@ fn loadCoreSubmesh(
 
         // load all texture coordinates of the vertex
         for textureCoordinateId in 0..textureCoordinateCount {
-            let textureCoordinate =
+            let mut textureCoordinate =
                 TextureCoordinate::from_values(dataSrc.readFloat()?, dataSrc.readFloat()?);
 
             // load data of the influence
@@ -758,6 +758,8 @@ fn loadCoreSubmesh(
             pCoreSubmesh.setPhysicalProperty(vertexId, physicalProperty);
         }
     }
+
+    pCoreSubmesh.setHasNonWhiteVertexColors(has_non_white_vertex_colors);
 
     // load all springs
     for springId in 0..springCount {
@@ -811,7 +813,7 @@ fn loadCoreSubmesh(
                     Vertex.textureCoords.push(textureCoordinate);
                 }
 
-                morphTarget.setBlendVertex(blendVertI, Vertex);
+                morphTarget.setBlendVertex(blendVertI, &Vertex);
                 cpt += 1;
                 if cpt < nbBlendVertex {
                     blendVertId = dataSrc.readInteger()? as usize;
@@ -825,12 +827,12 @@ fn loadCoreSubmesh(
     }
 
     // load all faces
-    let justOnce = 0;
-    let flipModel = false;
+    let mut justOnce = 0;
+    let mut flipModel = false;
     for faceId in 0..faceCount {
         // load data of the face
 
-        let tmp = [0; 3];
+        let mut tmp = [0; 3];
         tmp[0] = dataSrc.readInteger()?;
         tmp[1] = dataSrc.readInteger()?;
         tmp[2] = dataSrc.readInteger()?;
@@ -851,9 +853,9 @@ fn loadCoreSubmesh(
         if justOnce == 0 {
             // get vertexes of first face
             let vectorVertex = pCoreSubmesh.getVectorVertex();
-            let v1 = vectorVertex[tmp[0]];
-            let v2 = vectorVertex[tmp[1]];
-            let v3 = vectorVertex[tmp[2]];
+            let v1 = &vectorVertex[tmp[0] as usize];
+            let v2 = &vectorVertex[tmp[1] as usize];
+            let v3 = &vectorVertex[tmp[2] as usize];
 
             let point1 = CalVector::<f32>::new(v1.position.x, v1.position.y, v1.position.z);
             let point2 = CalVector::<f32>::new(v2.position.x, v2.position.y, v2.position.z);
@@ -876,7 +878,7 @@ fn loadCoreSubmesh(
 
             // if the two vectors point to the same direction then the poly needs flipping
             // so if the dot product > 0 it needs flipping
-            if (faceNormal * maxNorm > 0) {
+            if faceNormal.dot(maxNorm) > 0.0 {
                 flipModel = true;
             }
 
@@ -889,7 +891,7 @@ fn loadCoreSubmesh(
         }
 
         // flip if needed
-        if (flipModel) {
+        if flipModel {
             let tmp = face.vertexId[1];
             face.vertexId[1] = face.vertexId[2];
             face.vertexId[2] = tmp;
@@ -898,8 +900,10 @@ fn loadCoreSubmesh(
         // set face in the core submesh instance
         pCoreSubmesh.setFace(faceId, face);
     }
+    // Must be dropped before we return the value it refers to.
+    drop(pCoreSubmesh);
 
-    Ok(pCoreSubmesh)
+    Ok(CoreSubmesh)
 }
 
 //2051

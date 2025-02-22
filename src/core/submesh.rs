@@ -87,7 +87,7 @@ impl Default for Vertex {
 
 #[derive(Clone, Default)]
 pub struct Face {
-    vertexId: [CalIndex; 3],
+    pub vertexId: [CalIndex; 3],
 }
 
 impl Face {
@@ -224,12 +224,17 @@ impl CalCoreSubmesh {
             return true;
         }
 
-        self.m_vectorvectorTangentSpace[mapId].reserve(self.m_vectorVertex.len());
-        self.m_vectorvectorTangentSpace[mapId].resize(self.m_vectorVertex.len());
+        let new_len = self.m_vectorVertex.len();
+        let old_capacity = self.m_vectorvectorTangentSpace.capacity();
+
+        if new_len > old_capacity {
+            self.m_vectorvectorTangentSpace[mapId].reserve(new_len - old_capacity);
+        }
+        self.m_vectorvectorTangentSpace[mapId].resize(new_len, TangentSpace::default());
 
         for tangentId in 0..self.m_vectorvectorTangentSpace[mapId].len() {
-            self.m_vectorvectorTangentSpace[mapId][tangentId].tangent = CalVector(0.0f, 0.0f, 0.0f);
-            self.m_vectorvectorTangentSpace[mapId][tangentId].crossFactor = 1;
+            self.m_vectorvectorTangentSpace[mapId][tangentId].tangent = CalVector::new(0.0, 0.0, 0.0);
+            self.m_vectorvectorTangentSpace[mapId][tangentId].crossFactor = 1.0;
         }
 
         for faceId in 0..self.m_vectorFace.len() {
@@ -258,6 +263,29 @@ impl CalCoreSubmesh {
                 .tangent
                 .normalize();
         }
+
+        return true;
+    }
+
+    //528
+    /*****************************************************************************/
+    /** Sets a specified face.
+     *
+     * This function sets a specified face in the core submesh instance.
+     *
+     * @param faceId  The ID of the face.
+     * @param face The face that should be set.
+     *
+     * @return One of the following values:
+     *         \li \b true if successful
+     *         \li \b false if an error happened
+     *****************************************************************************/
+    pub fn setFace(&mut self, faceId: usize, face: Face) -> bool {
+        if (faceId < 0) || (faceId >= self.m_vectorFace.len()) {
+            return false;
+        }
+
+        self.m_vectorFace[faceId] = face;
 
         return true;
     }
@@ -347,6 +375,32 @@ impl CalCoreSubmesh {
         self.m_vectorvectorTextureCoordinate[textureCoordinateId][vertexId] = textureCoordinate;
 
         return true;
+    }
+
+    //683
+    /*****************************************************************************/
+    /** Adds a core sub morph target.
+     *
+     * This function adds a core sub morph target to the core sub mesh instance.
+     *
+     * @param pCoreSubMorphTarget A pointer to the core sub morph target that should be added.
+     *
+     * @return One of the following values:
+     *         \li the assigned sub morph target \b ID of the added core sub morph target
+     *         \li \b -1 if an error happened
+     *****************************************************************************/
+
+    pub fn addCoreSubMorphTarget(&mut self, mut pCoreSubMorphTarget: CalCoreSubMorphTarget) -> usize {
+        // get next sub morph target id
+
+        let subMorphTargetId = self.m_vectorCoreSubMorphTarget.len();
+        pCoreSubMorphTarget.setMorphID(subMorphTargetId);
+        self.m_vectorCoreSubMorphTarget.push(pCoreSubMorphTarget);
+
+        // This was done in the C++ implementation, but in Rust we require submesh to be set in SubMorphTarget constructor
+        // pCoreSubMorphTarget.setCoreSubmesh( this );
+
+        return subMorphTargetId;
     }
 
     /*****************************************************************************/
