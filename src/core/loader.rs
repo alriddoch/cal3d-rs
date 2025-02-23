@@ -132,7 +132,40 @@ pub fn loadCoreAnimation(
     Ok(coreanim)
 }
 
-//217
+//174
+/*****************************************************************************/
+/** Loads a core material instance.
+ *
+ * This function loads a core material instance from a file.
+ *
+ * @param strFilename The file to load the core material instance from.
+ *
+ * @return One of the following values:
+ *         \li a pointer to the core material
+ *         \li \b 0 if an error happened
+ *****************************************************************************/
+
+pub fn loadCoreMaterial(filename: &PathBuf) -> CalCoreMaterial {
+    let magic: String = String::from_utf8_lossy(MATERIAL_XMLFILE_MAGIC)
+        .trim_matches(char::from(0))
+        .to_owned();
+    if filename.to_str().unwrap().ends_with(magic.as_str()) {
+        todo!();
+        // loadXmlCoreMaterial(strFilename);
+    }
+
+    let mut buff_reader = BufReader::new(fs::File::open(filename)?);
+
+    let mut source = BufReaderSource::new(buff_reader);
+
+    todo!();
+    // let coremat = loadCoreMaterialFromSource( &mut source )?;
+
+    // coremat.setFilename( filename );
+
+    // return coremat;
+}
+
 /*****************************************************************************/
 /** Loads a core mesh instance.
  *

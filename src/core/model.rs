@@ -112,8 +112,16 @@ impl CalCoreModel {
     }
 
     pub fn loadCoreMaterial(&mut self, filename: &PathBuf) -> Result<(), CoreError> {
-        todo!();
-        Ok(())
+        // FIXME Check if skeleton has been loaded.
+        // the core skeleton has to be loaded already
+        //   if(!m_pCoreSkeleton)  {
+        //     CalError::setLastError(CalError::INVALID_HANDLE, __FILE__, __LINE__);
+        //     return -1;
+        //   }
+
+        let pCoreMaterial = loader::loadCoreMaterial(filename)?;
+
+        Ok(self.addCoreMaterial(pCoreMaterial))
     }
 
     //1211
