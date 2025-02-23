@@ -42,6 +42,10 @@ impl DataSource for BufReaderSource {
         Ok(())
     }
 
+    fn readByte(&mut self) -> Result<u8, SourceError> {
+        Ok(self.reader.read_u8()?)
+    }
+
     fn readFloat(&mut self) -> Result<f32, SourceError> {
         Ok(self.reader.read_f32::<NativeEndian>()?)
     }

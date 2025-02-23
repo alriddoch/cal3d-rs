@@ -15,11 +15,13 @@ use super::bone::{CalCoreBone, CalLightType};
 use super::bufreadersource::BufReaderSource;
 use super::datasource::{CalVectorFromDataSrc, DataSource, SourceError};
 use super::keyframe::CalCoreKeyframe;
+use super::material::CalCoreMaterial;
 use super::mesh::CalCoreMesh;
 use super::skeleton::CalCoreSkeleton;
 use super::submesh::CalCoreSubmesh;
 use super::submorphtarget::CalCoreSubMorphTarget;
 use super::track::CalCoreTrack;
+use super::xmlformat;
 use super::CoreError;
 
 const SKELETON_FILE_MAGIC: &[u8; 4] = b"CSF\0";
@@ -145,25 +147,27 @@ pub fn loadCoreAnimation(
  *         \li \b 0 if an error happened
  *****************************************************************************/
 
-pub fn loadCoreMaterial(filename: &PathBuf) -> CalCoreMaterial {
+pub fn loadCoreMaterial(filename: &PathBuf) -> Result<CalCoreMaterial, LoaderError> {
     let magic: String = String::from_utf8_lossy(MATERIAL_XMLFILE_MAGIC)
         .trim_matches(char::from(0))
+        .to_lowercase()
         .to_owned();
     if filename.to_str().unwrap().ends_with(magic.as_str()) {
-        todo!();
-        // loadXmlCoreMaterial(strFilename);
+        // todo!();
+        xmlformat::loadXmlCoreMaterial(filename);
     }
 
     let mut buff_reader = BufReader::new(fs::File::open(filename)?);
 
     let mut source = BufReaderSource::new(buff_reader);
 
-    todo!();
-    // let coremat = loadCoreMaterialFromSource( &mut source )?;
+    let coremat = loadCoreMaterialFromSource(&mut source)?;
 
-    // coremat.setFilename( filename );
+    source.report_unused_bytes(filename);
 
-    // return coremat;
+    // coremat.setFilename(filename);
+
+    Ok(coremat)
 }
 
 /*****************************************************************************/
@@ -198,6 +202,7 @@ pub fn loadCoreMesh(filename: &PathBuf) -> Result<Rc<RefCell<CalCoreMesh>>, Load
 
     Ok(Rc::new(RefCell::new(coremesh)))
 }
+
 /*****************************************************************************/
 /** Loads a core skeleton instance.
  *
@@ -313,6 +318,90 @@ pub fn loadCoreAnimationFromSource(
     Ok(Rc::new(RefCell::new(CalCoreAnimation::new(
         duration, animations,
     ))))
+}
+
+//763
+/*****************************************************************************/
+/** Loads a core material instance.
+ *
+ * This function loads a core material instance from a data source.
+ *
+ * @param dataSrc The data source to load the core material instance from.
+ *
+ * @return One of the following values:
+ *         \li a pointer to the core material
+ *         \li \b 0 if an error happened
+ *****************************************************************************/
+fn loadCoreMaterialFromSource(
+    dataSrc: &mut dyn DataSource,
+) -> Result<CalCoreMaterial, LoaderError> {
+    use super::material::{Color, Map};
+
+    let mut magic: [u8; 4] = [0; 4];
+    let magic_len = magic.len();
+    dataSrc.readBytes(&mut magic, magic_len)?;
+    if &magic != MATERIAL_FILE_MAGIC.as_slice() {
+        println!("{magic:?} {MATERIAL_FILE_MAGIC:?}");
+        return Err(LoaderError::MagicError);
+    }
+
+    // check if the version is compatible with the library
+    let version = dataSrc.readInteger()?;
+    if version < EARLIEST_COMPATIBLE_FILE_VERSION || version > CURRENT_FILE_VERSION {
+        return Err(LoaderError::VersionError);
+    }
+
+    let hasMaterialTypes = version >= FIRST_FILE_VERSION_WITH_MATERIAL_TYPES;
+
+    fn loadColorFromSource(dataSrc: &mut dyn DataSource) -> Result<Color, LoaderError> {
+        let red = dataSrc.readByte()?;
+        let green = dataSrc.readByte()?;
+        let blue = dataSrc.readByte()?;
+        let alpha = dataSrc.readByte()?;
+        Ok(Color::new(red, green, blue, alpha))
+    }
+
+    // get the ambient color of the core material
+    let ambientColor = loadColorFromSource(dataSrc)?;
+
+    // get the diffuse color of the core material
+    let diffuseColor = loadColorFromSource(dataSrc)?;
+
+    // get the specular color of the core material
+    let specularColor = loadColorFromSource(dataSrc)?;
+
+    // get the shininess factor of the core material
+    let shininess = dataSrc.readFloat()?;
+
+    // read the number of maps
+    let mapCount = dataSrc.readInteger()?;
+    if mapCount < 0 {
+        return Err(LoaderError::FormatError(format!(
+            "Invalid map count {mapCount} in material"
+        )));
+    }
+
+    let mut maps = Vec::with_capacity(mapCount as usize);
+
+    // load all maps
+    for mapId in 0..mapCount {
+        // read the filename of the map
+        let strName = dataSrc.readString()?;
+
+        let mapType = match hasMaterialTypes {
+            true => dataSrc.readString()?,
+            false => String::from(""),
+        };
+
+        let map = Map::new(strName, mapType, 0);
+
+        maps.push(map);
+    }
+
+    let pCoreMaterial =
+        CalCoreMaterial::new(ambientColor, diffuseColor, specularColor, shininess, maps);
+
+    Ok(pCoreMaterial)
 }
 
 //887

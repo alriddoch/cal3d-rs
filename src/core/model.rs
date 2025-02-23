@@ -4,6 +4,7 @@ use std::rc::Rc;
 
 use super::animation::CalCoreAnimation;
 use super::loader;
+use super::material::CalCoreMaterial;
 use super::mesh::CalCoreMesh;
 use super::skeleton::CalCoreSkeleton;
 
@@ -20,7 +21,7 @@ pub struct CalCoreModel {
     // std::vector<CalCoreAnimatedMorph *>   m_vectorCoreAnimatedMorph;
     m_vectorCoreMesh: Vec<Rc<RefCell<CalCoreMesh>>>,
     // std::vector<CalCoreMeshPtr>           m_vectorMorphMesh;
-    // std::vector<CalCoreMaterialPtr>       m_vectorCoreMaterial;
+    m_vectorCoreMaterial: Vec<CalCoreMaterial>,
     // std::map<int, std::map<int, int> >    m_mapmapCoreMaterialThread;
     // Cal::UserData                         m_userData;
     // std::map<std::string, int>            m_animationName;
@@ -53,6 +54,33 @@ impl CalCoreModel {
         // }
 
         self.m_vectorCoreAnimation.push(pCoreAnimation);
+        num as i32
+    }
+
+    //278
+    /*****************************************************************************/
+    /** Adds a core material.
+     *
+     * This function adds a core material to the core model instance.
+     *
+     * @param pCoreMaterial A pointer to the core material that should be added.
+     *
+     * @return One of the following values:
+     *         \li the assigned material \b ID of the added core material
+     *         \li \b -1 if an error happened
+     *****************************************************************************/
+    pub fn addCoreMaterial(&mut self, pCoreMaterial: CalCoreMaterial) -> i32 {
+        let num = self.m_vectorCoreMaterial.len();
+
+        // FIXME: Need a way to work out if replacing is needed
+        //   for  i in 0..num  {
+        //      if !self.m_vectorCoreMaterial[ i ]      {
+        //         self.m_vectorCoreMaterial[ i ] = pCoreMaterial;
+        //         return i;
+        //      }
+        //   }
+
+        self.m_vectorCoreMaterial.push(pCoreMaterial);
         num as i32
     }
 
@@ -111,7 +139,20 @@ impl CalCoreModel {
         Ok(self.addCoreAnimation(pCoreAnimation))
     }
 
-    pub fn loadCoreMaterial(&mut self, filename: &PathBuf) -> Result<(), CoreError> {
+    //1016
+    /*****************************************************************************/
+    /** Loads a core material.
+     *
+     * This function loads a core material from a file.
+     *
+     * @param strFilename The file from which the core material should be loaded
+     *                    from.
+     *
+     * @return One of the following values:
+     *         \li the assigned \b ID of the loaded core material
+     *         \li \b -1 if an error happened
+     *****************************************************************************/
+    pub fn loadCoreMaterial(&mut self, filename: &PathBuf) -> Result<i32, loader::LoaderError> {
         // FIXME Check if skeleton has been loaded.
         // the core skeleton has to be loaded already
         //   if(!m_pCoreSkeleton)  {

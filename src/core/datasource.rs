@@ -25,6 +25,7 @@ pub trait DataSource {
     fn ok(&self) -> bool;
     fn setError(&mut self);
     fn readBytes(&mut self, pBuffer: &mut [u8], length: usize) -> Result<(), SourceError>;
+    fn readByte(&mut self) -> Result<u8, SourceError>;
     fn readFloat(&mut self) -> Result<f32, SourceError>;
     fn readShort(&mut self) -> Result<i16, SourceError>;
     fn readInteger(&mut self) -> Result<i32, SourceError>;

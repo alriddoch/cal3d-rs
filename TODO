@@ -1,0 +1,1 @@
+Upgrade Model.calcoreSkeleton to be RefCell, so less if it's innards need to be RefCell?
