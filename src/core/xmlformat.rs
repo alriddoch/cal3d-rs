@@ -38,22 +38,27 @@ pub fn loadXmlCoreMaterial(filename: &PathBuf) -> Result<CalCoreMaterial, Loader
         let next = tokenizer.next();
         match next {
             Some(token) => match token {
-                Ok(val) => match val {
-                    xmlparser::Token::ElementStart {
-                        prefix,
-                        local,
-                        span,
-                    } => match local.as_str() {
-                        "MATERIAL" => {
-                            parse_material(&mut tokenizer)?;
-                        }
+                Ok(val) => {
+                    println!("Top {val:?}");
+                    match val {
+                        xmlparser::Token::ElementStart {
+                            prefix,
+                            local,
+                            span,
+                        } => match local.as_str() {
+                            "MATERIAL" => {
+                                parse_material(&mut tokenizer)?;
+                            }
+                            _ => {}
+                        },
                         _ => {}
-                    },
-                    _ => {}
-                },
+                    }
+                }
                 Err(e) => return Err(LoaderError::FormatError(format!("XML Parse error"))),
             },
-            None => {}
+            None => {
+                break
+            }
         }
     }
 
@@ -65,22 +70,49 @@ fn parse_material(tokenizer: &mut xmlparser::Tokenizer) -> Result<(), LoaderErro
         let next = tokenizer.next();
         match next {
             Some(token) => match token {
-                Ok(val) => match val {
-                    xmlparser::Token::ElementStart {
-                        prefix,
-                        local,
-                        span,
-                    } => match local.as_str() {
-                        "MATERIAL" => {
-                            // parse_material(tokenizer);
-                        }
+                Ok(val) => {
+                    println!("parse_material {val:?}");
+                    match val {
+                        xmlparser::Token::ElementStart {
+                            prefix,
+                            local,
+                            span,
+                        } => match local.as_str() {
+                            "MATERIAL" => {
+                                // parse_material(tokenizer);
+                            }
+                            _ => {}
+                        },
+                        xmlparser::Token::Attribute {
+                            prefix,
+                            local,
+                            value,
+                            span,
+                        } => match local.as_str() {
+                            "NUMMAPS" => {
+                                // parse_material(tokenizer);
+                            }
+                            _ => {}
+                        },
+                        xmlparser::Token::ElementEnd {
+                            end,
+                            span,
+                        } => match end {
+                            xmlparser::ElementEnd::Open => {
+                                // parse_material(tokenizer);
+                            }
+                            xmlparser::ElementEnd::Close(a,b) => {}
+                            xmlparser::ElementEnd::Empty => {}
+                        },
+                        
                         _ => {}
-                    },
-                    _ => {}
-                },
+                    }
+                }
                 Err(e) => return Err(LoaderError::FormatError(format!("XML Parse error"))),
             },
-            None => {}
+            None => {
+                return Ok(())
+            }
         }
     }
 }
