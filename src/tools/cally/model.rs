@@ -100,6 +100,9 @@ impl Model {
             line += 1;
             let mut buff = String::new();
             buff_reader.read_line(&mut buff)?;
+            if buff.is_empty() {
+                break
+            }
             if buff.ends_with('\n') {
                 buff.pop();
             }
@@ -148,6 +151,7 @@ impl Model {
                 }
             }
         }
+        Ok(())
     }
 
     pub fn onInit(&mut self, filename: &str) -> Result<(), ModelError> {

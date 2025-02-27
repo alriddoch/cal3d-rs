@@ -118,6 +118,7 @@ pub fn loadCoreAnimation(
 ) -> Result<Rc<RefCell<CalCoreAnimation>>, LoaderError> {
     let magic: String = String::from_utf8_lossy(ANIMATION_XMLFILE_MAGIC)
         .trim_matches(char::from(0))
+        .to_lowercase()
         .to_owned();
     if filename.to_str().unwrap().ends_with(magic.as_str()) {
         todo!();
@@ -153,8 +154,7 @@ pub fn loadCoreMaterial(filename: &PathBuf) -> Result<CalCoreMaterial, LoaderErr
         .to_lowercase()
         .to_owned();
     if filename.to_str().unwrap().ends_with(magic.as_str()) {
-        // todo!();
-        xmlformat::loadXmlCoreMaterial(filename);
+        return xmlformat::loadXmlCoreMaterial(filename);
     }
 
     let mut buff_reader = BufReader::new(fs::File::open(filename)?);
@@ -184,6 +184,7 @@ pub fn loadCoreMaterial(filename: &PathBuf) -> Result<CalCoreMaterial, LoaderErr
 pub fn loadCoreMesh(filename: &PathBuf) -> Result<Rc<RefCell<CalCoreMesh>>, LoaderError> {
     let magic: String = String::from_utf8_lossy(MESH_XMLFILE_MAGIC)
         .trim_matches(char::from(0))
+        .to_lowercase()
         .to_owned();
     if filename.to_str().unwrap().ends_with(magic.as_str()) {
         todo!();
@@ -220,6 +221,7 @@ pub fn loadCoreSkeleton(
 ) -> Result<(), LoaderError> {
     let magic: String = String::from_utf8_lossy(SKELETON_XMLFILE_MAGIC)
         .trim_matches(char::from(0))
+        .to_lowercase()
         .to_owned();
     if filename.to_str().unwrap().ends_with(magic.as_str()) {
         todo!();
