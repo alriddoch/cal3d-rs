@@ -1,3 +1,4 @@
+#[derive(Debug)]
 pub(super) struct Color {
     red: u8,
     green: u8,
@@ -16,6 +17,7 @@ impl Color {
     }
 }
 
+#[derive(Debug)]
 pub(super) struct Map {
     strFilename: String,
     mapType: String,
@@ -32,6 +34,7 @@ impl Map {
     }
 }
 
+#[derive(Debug)]
 pub struct CalCoreMaterial {
     m_ambientColor: Color,
     m_diffuseColor: Color,

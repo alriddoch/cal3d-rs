@@ -3,7 +3,7 @@ use std::num::{ParseFloatError, ParseIntError};
 use std::path::PathBuf;
 
 use super::loader::LoaderError;
-use super::material::{CalCoreMaterial, Color};
+use super::material::{CalCoreMaterial, Color, Map};
 
 impl From<ParseIntError> for LoaderError {
     fn from(error: ParseIntError) -> Self {
@@ -31,8 +31,6 @@ pub fn loadXmlCoreMaterial(filename: &PathBuf) -> Result<CalCoreMaterial, Loader
     let mut buf = String::new();
     reader.read_line(&mut buf)?;
 
-    println!("Foo {}", buf);
-
     for token in xmlparser::Tokenizer::from(buf.as_str()) {
         match token {
             Ok(val) => match val {
@@ -40,14 +38,11 @@ pub fn loadXmlCoreMaterial(filename: &PathBuf) -> Result<CalCoreMaterial, Loader
             },
             Err(e) => return Err(LoaderError::FormatError(format!("XML Parse error"))),
         }
-        println!("{:?}", token);
     }
 
     buf.clear();
 
     reader.read_to_string(&mut buf)?; //.map(|l| l.unwrap());
-
-    println!("Bar {}", buf);
 
     let mut tokenizer = xmlparser::Tokenizer::from(buf.as_str());
     let material = loop {
@@ -55,7 +50,6 @@ pub fn loadXmlCoreMaterial(filename: &PathBuf) -> Result<CalCoreMaterial, Loader
         match next {
             Some(token) => match token {
                 Ok(val) => {
-                    println!("Top {val:?}");
                     match val {
                         xmlparser::Token::ElementStart {
                             prefix: _,
@@ -77,13 +71,14 @@ pub fn loadXmlCoreMaterial(filename: &PathBuf) -> Result<CalCoreMaterial, Loader
                 }
                 Err(e) => return Err(LoaderError::FormatError(format!("XML Parse error"))),
             },
-            None =>  {
+            None => {
                 return Err(LoaderError::FormatError(format!(
                     "Unexpected end of XML file"
                 )))
-            },
+            }
         }
     };
+    println!("Material: {material:?}");
 
     Ok(material)
 }
@@ -95,7 +90,6 @@ fn parse_material(tokenizer: &mut xmlparser::Tokenizer) -> Result<CalCoreMateria
         match next {
             Some(token) => match token {
                 Ok(val) => {
-                    println!("parse_material {val:?}");
                     match val {
                         xmlparser::Token::ElementStart {
                             prefix: _,
@@ -125,20 +119,18 @@ fn parse_material(tokenizer: &mut xmlparser::Tokenizer) -> Result<CalCoreMateria
                         },
                         xmlparser::Token::ElementEnd { end, span } => match end {
                             xmlparser::ElementEnd::Open => {
-                                let (ambient, diffuse, specular, shininess) =
+                                let (ambient, diffuse, specular, shininess, maps) =
                                     parse_material_elements(tokenizer)?;
                                 break CalCoreMaterial::new(
                                     ambient,
                                     diffuse,
                                     specular,
                                     shininess,
-                                    Vec::new(),
+                                    maps,
                                 );
                             }
                             xmlparser::ElementEnd::Close(_, element) => {
-                                if !matches!(element.to_uppercase().as_str(), "MATERIAL") {
-
-                                }
+                                if !matches!(element.to_uppercase().as_str(), "MATERIAL") {}
                             }
                             xmlparser::ElementEnd::Empty => {}
                         },
@@ -170,18 +162,18 @@ fn parse_material(tokenizer: &mut xmlparser::Tokenizer) -> Result<CalCoreMateria
 
 fn parse_material_elements(
     tokenizer: &mut xmlparser::Tokenizer,
-) -> Result<(Color, Color, Color, f32), LoaderError> {
+) -> Result<(Color, Color, Color, f32, Vec<Map>), LoaderError> {
     let mut ambient: Option<Color> = None;
     let mut diffuse: Option<Color> = None;
     let mut specular: Option<Color> = None;
     let mut shininess: Option<f32> = None;
+    let mut vector_map: Option<Vec<Map>> = None;
 
     loop {
         let next = tokenizer.next();
         match next {
             Some(token) => match token {
                 Ok(val) => {
-                    println!("parse_material_elements {val:?}");
                     match val {
                         xmlparser::Token::ElementStart {
                             prefix,
@@ -200,6 +192,17 @@ fn parse_material_elements(
                             "SHININESS" => {
                                 shininess = Some(parse_float(tokenizer, local.as_str())?);
                             }
+                            "MAP" => {
+                                if vector_map.is_none() {
+                                    vector_map = Some(Vec::new());
+                                }
+                                let map = parse_string(tokenizer, local.as_str())?;
+                                vector_map.as_mut().unwrap().push(Map::new(
+                                     map,
+                                     String::from("Diffuse Color"),
+                                     0
+                                ))
+                            }
                             _ => {
                                 return Err(LoaderError::FormatError(format!(
                                     "Unexpect element {} in MATERIAL",
@@ -211,10 +214,12 @@ fn parse_material_elements(
                             xmlparser::ElementEnd::Close(a, b) => break,
                             xmlparser::ElementEnd::Open => {}
                             xmlparser::ElementEnd::Empty => {
-                                return Err(LoaderError::FormatError(format!("XML material element empty")))
+                                return Err(LoaderError::FormatError(format!(
+                                    "XML material element empty"
+                                )))
                             }
                         },
-                        xmlparser::Token::Text { text: _ } => {},
+                        xmlparser::Token::Text { text: _ } => {}
                         _ => {
                             return Err(LoaderError::FormatError(format!(
                                 "XML error in material elements: {:?}",
@@ -243,6 +248,7 @@ fn parse_material_elements(
         diffuse.ok_or(LoaderError::FormatError(format!("XML Parse error")))?,
         specular.ok_or(LoaderError::FormatError(format!("XML Parse error")))?,
         shininess.ok_or(LoaderError::FormatError(format!("XML Parse error")))?,
+        vector_map.unwrap_or(Vec::new())
     ))
 }
 
@@ -254,17 +260,30 @@ fn parse_color(tokenizer: &mut xmlparser::Tokenizer, element: &str) -> Result<Co
         match next {
             Some(token) => match token {
                 Ok(val) => {
-                    println!("parse_color {val:?}");
                     match val {
                         xmlparser::Token::Text { text } => {
-                            todo!();
-                            color = Some(Color::new(255, 255, 255, 255));
+                            let parts = text.split(" ").collect::<Vec<&str>>();
+                            if parts.len() != 4 {
+                                return Err(LoaderError::FormatError(format!(
+                                    "XML {element} has wrong number of values: {text}"
+                                )));
+                            }
+
+                            color = Some(Color::new(
+                                parts[0].parse::<u8>()?,
+                                parts[1].parse::<u8>()?,
+                                parts[2].parse::<u8>()?,
+                                parts[3].parse::<u8>()?,
+                            ));
                         }
                         xmlparser::Token::ElementEnd { end, span } => match end {
                             xmlparser::ElementEnd::Close(a, b) => break,
                             xmlparser::ElementEnd::Open => {}
                             xmlparser::ElementEnd::Empty => {
-                                return Err(LoaderError::FormatError(format!("XML {} element empty", element)))
+                                return Err(LoaderError::FormatError(format!(
+                                    "XML {} element empty",
+                                    element
+                                )))
                             }
                         },
                         _ => {
@@ -301,7 +320,6 @@ fn parse_float(tokenizer: &mut xmlparser::Tokenizer, element: &str) -> Result<f3
         match next {
             Some(token) => match token {
                 Ok(val) => {
-                    println!("parse_float {val:?}");
                     match val {
                         xmlparser::Token::Text { text } => {
                             float = Some(text.parse::<f32>()?);
@@ -310,10 +328,18 @@ fn parse_float(tokenizer: &mut xmlparser::Tokenizer, element: &str) -> Result<f3
                             xmlparser::ElementEnd::Close(a, b) => break,
                             xmlparser::ElementEnd::Open => {}
                             xmlparser::ElementEnd::Empty => {
-                                return Err(LoaderError::FormatError(format!("XML {} element empty", element)))
+                                return Err(LoaderError::FormatError(format!(
+                                    "XML {} element empty",
+                                    element
+                                )))
                             }
                         },
-                        _ => return Err(LoaderError::FormatError(format!("XML error in {element} float: {:?}", val))),
+                        _ => {
+                            return Err(LoaderError::FormatError(format!(
+                                "XML error in {element} float: {:?}",
+                                val
+                            )))
+                        }
                     }
                 }
                 Err(e) => {
@@ -332,4 +358,51 @@ fn parse_float(tokenizer: &mut xmlparser::Tokenizer, element: &str) -> Result<f3
     }
 
     Ok(float.ok_or(LoaderError::FormatError(format!("")))?)
+}
+
+fn parse_string(tokenizer: &mut xmlparser::Tokenizer, element: &str) -> Result<String, LoaderError> {
+    let mut string: Option<String> = None;
+    loop {
+        let next = tokenizer.next();
+        match next {
+            Some(token) => match token {
+                Ok(val) => {
+                    match val {
+                        xmlparser::Token::Text { text } => {
+                            string = Some(text.to_string());
+                        }
+                        xmlparser::Token::ElementEnd { end, span } => match end {
+                            xmlparser::ElementEnd::Close(a, b) => break,
+                            xmlparser::ElementEnd::Open => {}
+                            xmlparser::ElementEnd::Empty => {
+                                return Err(LoaderError::FormatError(format!(
+                                    "XML {} element empty",
+                                    element
+                                )))
+                            }
+                        },
+                        _ => {
+                            return Err(LoaderError::FormatError(format!(
+                                "XML error in {element} string: {:?}",
+                                val
+                            )))
+                        }
+                    }
+                }
+                Err(e) => {
+                    return Err(LoaderError::FormatError(format!(
+                        "XML Parse error: {:?}",
+                        e
+                    )))
+                }
+            },
+            None => {
+                return Err(LoaderError::FormatError(format!(
+                    "Unexpected end of XML file"
+                )))
+            }
+        }
+    }
+
+    Ok(string.ok_or(LoaderError::FormatError(format!("")))?)
 }
