@@ -796,7 +796,8 @@ fn loadCoreSubmesh(
     // load all vertices and their influences
     let mut has_non_white_vertex_colors = false;
 
-    let mut textureCoordinates: Vec<Vec<TextureCoordinate>> = Vec::new();
+    let mut textureCoordinates: Vec<Vec<TextureCoordinate>> =
+        vec![vec![TextureCoordinate::new(); vertexCount]; textureCoordinateCount];
 
     // let vertexVector =
     for vertexId in 0..vertexCount {
