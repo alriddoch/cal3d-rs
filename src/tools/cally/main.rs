@@ -1,4 +1,5 @@
 mod demo;
+mod graphics;
 mod menu;
 mod model;
 
