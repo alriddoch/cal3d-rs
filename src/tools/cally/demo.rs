@@ -2,6 +2,7 @@ use clap::Parser;
 
 use super::menu::theMenu;
 use super::model::*;
+use super::graphics;
 
 use std::{
     default,
@@ -41,7 +42,7 @@ pub struct Cli {
     bench: bool,
 }
 
-#[derive(Default)]
+// #[derive(Default)]
 pub struct Demo {
     width: i32,
     height: i32,
@@ -67,6 +68,10 @@ pub struct Demo {
     bPaused: bool,
     averageCPUTime: f32,
     bOutputAverageCPUTimeAtExit: bool,
+
+    screen: graphics::Screen,
+    camera: graphics::Camera,
+    tr: graphics::TextRenderer,
 }
 
 fn loadTexture(filename: &str) -> Result<u32> {
@@ -80,11 +85,32 @@ impl Demo {
         Demo {
             width: 640,
             height: 480,
+            bFullscreen: false,
+            fpsDuration: 0.0,
+            fpsFrames: 0,
+            fps: 0,
             tiltAngle: -70.0,
             twistAngle: -45.0,
             distance: 270.0,
             strDatapath: String::from("data/"),
-            ..Default::default()
+            screen: graphics::Screen::new("foo", 800, 600).unwrap(), 
+            cursorTextureId: 0,
+            logoTextureId: 0,
+            fpsTextureId: 0,
+            mouseX: 0,
+            mouseY: 0,
+            bLeftMouseButtonDown: false,
+            bRightMouseButtonDown: false,
+            lastTick: 0,
+            strCal3D_Datapath: String::from(""),
+            vectorModel: Vec::new(),
+            currentModel: 0,
+            bPaused: false,
+            averageCPUTime: 0.0,
+            bOutputAverageCPUTimeAtExit: false,
+            camera,
+            tr,
+            // ..Default::default()
         }
     }
 
@@ -216,5 +242,14 @@ Quit the demo by pressing 'q' or ESC
         Ok(())
     }
 
-    pub fn Loop(&mut self) {}
+    pub fn Loop(&mut self) {
+        loop {
+            self.onIdle();
+
+            self.onRender();
+            self.onRenderInterface();
+            self.screen.swap();
+
+        }
+    }
 }
