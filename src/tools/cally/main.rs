@@ -9,7 +9,7 @@ use model::Model;
 fn main() {
     cal3d::footle();
 
-    let mut demo = Demo::new();
+    let mut demo = Demo::new().unwrap();
 
     demo.OnCreate().expect("Demo create failed");
 
