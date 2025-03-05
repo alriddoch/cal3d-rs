@@ -13,6 +13,7 @@ use std::{
 pub enum DemoError {
     ModelError(ModelError),
     PathError,
+    OtherError(String),
 }
 
 impl From<ModelError> for DemoError {
@@ -23,6 +24,15 @@ impl From<ModelError> for DemoError {
 
 type Result<T> = std::result::Result<T, DemoError>;
 
+impl From<graphics::GraphicsError> for DemoError {
+    fn from(error: graphics::GraphicsError) -> Self {
+        match error {
+            graphics::GraphicsError::OtherError(e) => {
+                DemoError::OtherError(e)
+            }
+        }
+    }
+}
 #[derive(Parser)]
 #[command(version, about, long_about = None)]
 pub struct Cli {
@@ -81,8 +91,8 @@ fn loadTexture(filename: &str) -> Result<u32> {
 }
 
 impl Demo {
-    pub fn new() -> Self {
-        Demo {
+    pub fn new() -> Result<Self> {
+        Ok(Demo {
             width: 640,
             height: 480,
             bFullscreen: false,
@@ -93,7 +103,7 @@ impl Demo {
             twistAngle: -45.0,
             distance: 270.0,
             strDatapath: String::from("data/"),
-            screen: graphics::Screen::new("foo", 800, 600).unwrap(), 
+            screen: graphics::Screen::new("foo", 800, 600)?, 
             cursorTextureId: 0,
             logoTextureId: 0,
             fpsTextureId: 0,
@@ -108,10 +118,10 @@ impl Demo {
             bPaused: false,
             averageCPUTime: 0.0,
             bOutputAverageCPUTimeAtExit: false,
-            camera,
-            tr,
+            camera: graphics::Camera::new(),
+            tr: graphics::TextRenderer::new(),
             // ..Default::default()
-        }
+        })
     }
 
     pub fn OnCreate(&mut self) -> Result<()> {
@@ -244,10 +254,10 @@ Quit the demo by pressing 'q' or ESC
 
     pub fn Loop(&mut self) {
         loop {
-            self.onIdle();
+            // self.onIdle();
 
-            self.onRender();
-            self.onRenderInterface();
+            // self.onRender();
+            // self.onRenderInterface();
             self.screen.swap();
 
         }

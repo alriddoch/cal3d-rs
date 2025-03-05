@@ -8,3 +8,7 @@ pub use camera::*;
 pub use glslprogram::*;
 pub use screen::*;
 pub use textrenderer::*;
+
+pub enum GraphicsError {
+    OtherError(String),
+}

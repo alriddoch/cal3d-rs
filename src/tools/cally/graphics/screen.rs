@@ -2,6 +2,8 @@ use gl;
 use glfw::Context;
 use glfw::{self};
 
+use super::GraphicsError;
+
 pub struct Screen {
     pub glfw: glfw::Glfw,
     pub window: glfw::PWindow,
@@ -9,7 +11,7 @@ pub struct Screen {
 }
 
 impl Screen {
-    pub fn new(title: &str, width: u32, height: u32) -> Result<Self, String> {
+    pub fn new(title: &str, width: u32, height: u32) -> Result<Self, GraphicsError> {
         let mut glfw = glfw::init(glfw::fail_on_errors).unwrap();
         glfw.window_hint(glfw::WindowHint::Resizable(false));
         glfw.window_hint(glfw::WindowHint::ContextVersion(3, 3));
@@ -21,7 +23,7 @@ impl Screen {
         let Some((mut window, events)) =
             glfw.create_window(width, height, title, glfw::WindowMode::Windowed)
         else {
-            return Err(String::from("Create window failed"));
+            return Err(GraphicsError::OtherError(format!("Create window failed")));
         };
         let (screen_width, screen_height) = window.get_framebuffer_size();
 
