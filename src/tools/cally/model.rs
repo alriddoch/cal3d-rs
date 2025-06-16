@@ -101,7 +101,7 @@ impl Model {
             let mut buff = String::new();
             buff_reader.read_line(&mut buff)?;
             if buff.is_empty() {
-                break
+                break;
             }
             if buff.ends_with('\n') {
                 buff.pop();
@@ -109,7 +109,7 @@ impl Model {
             println!("{}: '{}' ", buff.len(), buff);
             if buff.len() <= 1 || buff.starts_with('#') {
                 println!("Skipping blank or comment line");
-                continue
+                continue;
             }
 
             let (key, value) = sscanf::scanf!(buff, r"{str}={str:/.+/}")?;
@@ -163,5 +163,18 @@ impl Model {
 
         // FIXME: Postprocessing, textures, etc.
         Ok(())
+    }
+
+    //517.go
+    // ----------------------------------------------------------------------------//
+    // Update the model                                                           //
+    // ----------------------------------------------------------------------------//
+    pub fn onUpdate(&mut self, elapsedSeconds: f32) {
+        // if s.calModel == nil {
+        //     // fmt.Printf("No calmodel. Skipping update ...\n")
+        //     return;
+        // }
+        // // update the model
+        // s.calModel.Update(elapsedSeconds)
     }
 }

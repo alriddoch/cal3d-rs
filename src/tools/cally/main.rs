@@ -2,6 +2,7 @@ mod demo;
 mod graphics;
 mod menu;
 mod model;
+mod tick;
 
 use demo::*;
 use model::Model;

@@ -1,8 +1,9 @@
 use clap::Parser;
 
+use super::graphics;
 use super::menu::theMenu;
 use super::model::*;
-use super::graphics;
+use super::tick::*;
 
 use std::{
     default,
@@ -27,9 +28,7 @@ type Result<T> = std::result::Result<T, DemoError>;
 impl From<graphics::GraphicsError> for DemoError {
     fn from(error: graphics::GraphicsError) -> Self {
         match error {
-            graphics::GraphicsError::OtherError(e) => {
-                DemoError::OtherError(e)
-            }
+            graphics::GraphicsError::OtherError(e) => DemoError::OtherError(e),
         }
     }
 }
@@ -70,14 +69,20 @@ pub struct Demo {
     distance: f32,
     bLeftMouseButtonDown: bool,
     bRightMouseButtonDown: bool,
-    lastTick: u32,
+    lastTick: u128,
     strDatapath: String,
     strCal3D_Datapath: String,
     vectorModel: Vec<Model>,
-    currentModel: u32,
+    currentModel: usize,
     bPaused: bool,
     averageCPUTime: f32,
     bOutputAverageCPUTimeAtExit: bool,
+
+    start: f64,
+    firstTime: f64,
+    lastTime: f64,
+    bFirst: bool,
+    cumul: f64,
 
     screen: graphics::Screen,
     camera: graphics::Camera,
@@ -103,7 +108,7 @@ impl Demo {
             twistAngle: -45.0,
             distance: 270.0,
             strDatapath: String::from("data/"),
-            screen: graphics::Screen::new("foo", 800, 600)?, 
+            screen: graphics::Screen::new("foo", 800, 600)?,
             cursorTextureId: 0,
             logoTextureId: 0,
             fpsTextureId: 0,
@@ -118,6 +123,12 @@ impl Demo {
             bPaused: false,
             averageCPUTime: 0.0,
             bOutputAverageCPUTimeAtExit: false,
+
+            start: 0.0,
+            firstTime: 0.0,
+            lastTime: 0.0,
+            bFirst: true,
+            cumul: 0.0,
             camera: graphics::Camera::new(),
             tr: graphics::TextRenderer::new(),
             // ..Default::default()
@@ -254,12 +265,61 @@ Quit the demo by pressing 'q' or ESC
 
     pub fn Loop(&mut self) {
         loop {
-            // self.onIdle();
+            self.onIdle();
 
             // self.onRender();
             // self.onRenderInterface();
             self.screen.swap();
-
         }
+    }
+
+    fn onIdle(&mut self) {
+        // get the current tick value
+        let tick = getTick();
+
+        // calculate the amount of elapsed seconds
+        let elapsedSeconds = (tick - self.lastTick) as f32 / 1000.0;
+
+        // adjust fps counter
+        self.fpsDuration += elapsedSeconds;
+        if self.fpsDuration >= 1.0 {
+            self.fps = (self.fpsFrames as f32 / self.fpsDuration) as i32;
+            self.fpsDuration = 0.0;
+            self.fpsFrames = 0;
+        }
+
+        self.start = getTime();
+
+        if self.bFirst {
+            self.firstTime = self.start;
+        } else {
+            self.lastTime = self.start;
+        }
+
+        // update the current model
+        if !self.bPaused {
+            //for (int i = 0; i < 10; i++)
+            self.vectorModel[self.currentModel].onUpdate(elapsedSeconds);
+        }
+
+        let mut stop = getTime();
+
+        stop -= self.start;
+
+        self.cumul += stop;
+
+        if !self.bFirst {
+            self.averageCPUTime = float32(self.cumul / (self.lastTime - self.firstTime) * 100);
+        }
+        self.bFirst = false;
+
+        // update the menu
+        self.theMenu.onUpdate(elapsedSeconds);
+
+        // current tick will be last tick next round
+        self.lastTick = tick;
+
+        // update the screen
+        //glutPostRedisplay()
     }
 }
