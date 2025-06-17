@@ -2,6 +2,7 @@ mod demo;
 mod graphics;
 mod menu;
 mod model;
+mod sprite;
 mod tick;
 
 use demo::*;

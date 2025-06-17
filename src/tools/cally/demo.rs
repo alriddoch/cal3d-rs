@@ -72,7 +72,7 @@ pub struct Demo {
     bLeftMouseButtonDown: bool,
     bRightMouseButtonDown: bool,
     lastTick: u128,
-    strDatapath: String,
+    pub strDatapath: String,
     strCal3D_Datapath: String,
     vectorModel: Vec<Model>,
     currentModel: usize,

@@ -1,7 +1,14 @@
 use once_cell::sync::Lazy;
 
+use super::demo::*;
+use super::sprite::*;
+
 use std::cell::RefCell;
 use std::rc::Rc;
+use std::{
+    default,
+    path::{Path, PathBuf},
+};
 
 pub struct Menu {
     menuX: i32,
@@ -15,12 +22,12 @@ pub struct Menu {
     bLight: bool,
     actionTimespan: [f32; 2],
     nextTimespan: f32,
-    // theDemo, *Demo
+    theDemo: Option<Rc<RefCell<Demo>>>,
     // sr:      *SpriteRenderer
     // lr:      *graphics.LineRenderer
 
-    // menu, *Sprite
-    // lod,  *Sprite
+     menu: Sprite,
+     lod:  Sprite,
 }
 
 impl Menu {
@@ -37,11 +44,44 @@ impl Menu {
             lodX: 4,
             lodY: 4,
             bLodMovement: false,
+            theDemo: None,
             // sr: sr,
+
+            menu: Sprite::new(),
+            lod: Sprite::new(),
         }
     }
 
-    pub fn onInit(&mut self, width: i32, height: i32) {}
+    pub fn onInit(&mut self, demo: Rc<RefCell<Demo>>, width: i32, height: i32) {
+        self.theDemo = Some(demo);
+
+
+	// load the menu texture
+	let strFilename = [demo.borrow().strDatapath.as_str(), "menu.raw"]
+            .iter()
+            .collect::<PathBuf>();
+    // filepath.Join(demo.borrow().strDatapath, "menu.raw")
+
+
+	self.menu.WithSpriteFile(strFilename).Setup()?;
+	self.sr.Bind(self.menu)
+
+	// load the lodxture
+	strFilename = filepath.Join(demo.strDatapath, "lod.raw")
+
+	if err := self.lod.Setup(WithSpriteFile(strFilename)); err != nil {
+		return err
+	}
+	self.sr.Bind(self.lod)
+
+	self.lr = graphics.NewLineRenderer()
+	if err := self.lr.Setup(graphics.WithOrtho(width, height)); err != nil {
+		return errors.Wrapf(err, "LineRenderer setup failed")
+	}
+
+	self.onResize(width, height)
+	return nil
+    }
 
     // ----------------------------------------------------------------------------//
     // Update the menu                                                            //
