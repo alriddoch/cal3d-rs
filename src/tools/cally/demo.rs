@@ -1,10 +1,12 @@
 use clap::Parser;
 
 use super::graphics;
-use super::menu::theMenu;
+use super::menu::*;
 use super::model::*;
 use super::tick::*;
 
+use std::cell::RefCell;
+use std::rc::Rc;
 use std::{
     default,
     path::{Path, PathBuf},
@@ -84,6 +86,7 @@ pub struct Demo {
     bFirst: bool,
     cumul: f64,
 
+    theMenu: Rc<RefCell<Menu>>,
     screen: graphics::Screen,
     camera: graphics::Camera,
     tr: graphics::TextRenderer,
@@ -129,6 +132,7 @@ impl Demo {
             lastTime: 0.0,
             bFirst: true,
             cumul: 0.0,
+            theMenu: Rc::new(RefCell::new(Menu::new())),
             camera: graphics::Camera::new(),
             tr: graphics::TextRenderer::new(),
             // ..Default::default()
@@ -250,7 +254,7 @@ o----------------------------------------------------------------o"
         println!("");
 
         // initialize menu
-        theMenu.onInit(self.width, self.height);
+        self.theMenu.borrow_mut().onInit(self.width, self.height);
 
         // we're done
         println!(
@@ -309,12 +313,12 @@ Quit the demo by pressing 'q' or ESC
         self.cumul += stop;
 
         if !self.bFirst {
-            self.averageCPUTime = float32(self.cumul / (self.lastTime - self.firstTime) * 100);
+            self.averageCPUTime = (self.cumul / (self.lastTime - self.firstTime) * 100.0) as f32;
         }
         self.bFirst = false;
 
         // update the menu
-        self.theMenu.onUpdate(elapsedSeconds);
+        self.theMenu.borrow_mut().onUpdate(elapsedSeconds);
 
         // current tick will be last tick next round
         self.lastTick = tick;
