@@ -8,14 +8,21 @@ mod tick;
 use demo::*;
 use model::Model;
 
+use std::cell::RefCell;
+use std::rc::Rc;
+
 fn main() {
     cal3d::footle();
 
-    let mut demo = Demo::new().unwrap();
+    let demo = Rc::new(RefCell::new(Demo::new().unwrap()));
 
-    demo.OnCreate().expect("Demo create failed");
+    let demo_ref = demo.clone();
 
-    demo.OnInit().expect("Demo init failed");
+    demo.borrow_mut().OnCreate().expect("Demo create failed");
 
-    demo.Loop();
+    demo.borrow_mut()
+        .OnInit(demo_ref)
+        .expect("Demo init failed");
+
+    demo.borrow_mut().Loop();
 }

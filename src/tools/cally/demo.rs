@@ -162,7 +162,7 @@ o----------------------------------------------------------------o"
         Ok(())
     }
 
-    pub fn OnInit(&mut self) -> Result<()> {
+    pub fn OnInit(&mut self, self_ref: Rc<RefCell<Demo>>) -> Result<()> {
         // load the cursor texture
         let strFilename = [self.strDatapath.as_str(), "cursor.raw"]
             .iter()
@@ -254,7 +254,9 @@ o----------------------------------------------------------------o"
         println!("");
 
         // initialize menu
-        self.theMenu.borrow_mut().onInit(self.width, self.height);
+        self.theMenu
+            .borrow_mut()
+            .onInit(self_ref, self.width, self.height);
 
         // we're done
         println!(

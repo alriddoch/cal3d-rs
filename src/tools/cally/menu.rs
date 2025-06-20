@@ -1,6 +1,7 @@
 use once_cell::sync::Lazy;
 
 use super::demo::*;
+use super::graphics;
 use super::sprite::*;
 
 use std::cell::RefCell;
@@ -23,11 +24,23 @@ pub struct Menu {
     actionTimespan: [f32; 2],
     nextTimespan: f32,
     theDemo: Option<Rc<RefCell<Demo>>>,
-    // sr:      *SpriteRenderer
-    // lr:      *graphics.LineRenderer
 
-     menu: Sprite,
-     lod:  Sprite,
+    sr: Option<Rc<RefCell<graphics::SpriteRenderer>>>,
+    lr: graphics::LineRenderer,
+
+    menu: Sprite,
+    lod: Sprite,
+}
+
+pub enum MenuError {
+    SpriteError(SpriteError),
+    OtherError(String),
+}
+
+impl From<SpriteError> for MenuError {
+    fn from(error: SpriteError) -> Self {
+        MenuError::SpriteError(error)
+    }
 }
 
 impl Menu {
@@ -45,42 +58,45 @@ impl Menu {
             lodY: 4,
             bLodMovement: false,
             theDemo: None,
-            // sr: sr,
+            sr: None,
+            lr: graphics::LineRenderer::new(),
 
             menu: Sprite::new(),
             lod: Sprite::new(),
         }
     }
 
-    pub fn onInit(&mut self, demo: Rc<RefCell<Demo>>, width: i32, height: i32) {
+    pub fn onInit(
+        &mut self,
+        demo: Rc<RefCell<Demo>>,
+        sprite_renderer: Rc<RefCell<graphics::SpriteRenderer>>,
+        width: i32,
+        height: i32,
+    ) -> Result<(), MenuError> {
         self.theDemo = Some(demo);
+        self.sr = Some(sprite_renderer);
 
-
-	// load the menu texture
-	let strFilename = [demo.borrow().strDatapath.as_str(), "menu.raw"]
+        // load the menu texture
+        let strFilename = [demo.borrow().strDatapath.as_str(), "menu.raw"]
             .iter()
             .collect::<PathBuf>();
-    // filepath.Join(demo.borrow().strDatapath, "menu.raw")
+        // filepath.Join(demo.borrow().strDatapath, "menu.raw")
 
+        self.menu.WithSpriteFile(strFilename).Setup()?;
+        self.sr.as_ref().unwrap().borrow().Bind(self.menu);
 
-	self.menu.WithSpriteFile(strFilename).Setup()?;
-	self.sr.Bind(self.menu)
+        // load the lodxture
+        let strFilename = [demo.borrow().strDatapath.as_str(), "lod.raw"]
+            .iter()
+            .collect::<PathBuf>();
 
-	// load the lodxture
-	strFilename = filepath.Join(demo.strDatapath, "lod.raw")
+        self.lod.WithSpriteFile(strFilename).Setup()?;
+        self.sr.as_ref().unwrap().borrow().Bind(self.lod);
 
-	if err := self.lod.Setup(WithSpriteFile(strFilename)); err != nil {
-		return err
-	}
-	self.sr.Bind(self.lod)
+        self.lr.WithOrtho(width, height).Setup()?;
 
-	self.lr = graphics.NewLineRenderer()
-	if err := self.lr.Setup(graphics.WithOrtho(width, height)); err != nil {
-		return errors.Wrapf(err, "LineRenderer setup failed")
-	}
-
-	self.onResize(width, height)
-	return nil
+        self.onResize(width, height);
+        return Ok(());
     }
 
     // ----------------------------------------------------------------------------//
@@ -109,5 +125,17 @@ impl Menu {
                 self.nextTimespan = 0.0;
             }
         }
+    }
+
+    // ----------------------------------------------------------------------------//
+    // Handle window resize event                                                 //
+    // ----------------------------------------------------------------------------//
+    // 429
+    fn onResize(&mut self, width: i32, _height: i32) {
+        // adjust menu position
+        self.menuX = width - 132;
+
+        // adjust lod position
+        self.lodX = width / 2 - 128;
     }
 }
