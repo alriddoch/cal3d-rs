@@ -141,4 +141,8 @@ impl GLSLProgram {
     pub fn cleanup(&self) {
         delete_program(self.program_id);
     }
+
+    pub fn id(&self) -> u32 {
+        self.program_id
+    }
 }

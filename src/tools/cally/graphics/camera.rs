@@ -19,4 +19,8 @@ impl Camera {
     pub fn projection(&self) -> *const gl::types::GLfloat {
         self.proj.as_ptr()
     }
+
+    pub fn proj(&self) -> &cgmath::Matrix4<f32> {
+        &self.proj
+    }
 }

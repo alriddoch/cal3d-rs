@@ -55,8 +55,8 @@ pub struct Cli {
 
 // #[derive(Default)]
 pub struct Demo {
-    width: i32,
-    height: i32,
+    width: u32,
+    height: u32,
     bFullscreen: bool,
     fpsDuration: f32,
     fpsFrames: i32,
@@ -90,6 +90,8 @@ pub struct Demo {
     screen: graphics::Screen,
     camera: graphics::Camera,
     tr: graphics::TextRenderer,
+    lr: graphics::LineRenderer,
+    sr: Rc<RefCell<graphics::SpriteRenderer>>,
 }
 
 fn loadTexture(filename: &str) -> Result<u32> {
@@ -135,6 +137,8 @@ impl Demo {
             theMenu: Rc::new(RefCell::new(Menu::new())),
             camera: graphics::Camera::new(),
             tr: graphics::TextRenderer::new(),
+            lr: graphics::LineRenderer::new(),
+            sr: Rc::new(RefCell::new(graphics::SpriteRenderer::new())),
             // ..Default::default()
         })
     }
@@ -163,6 +167,14 @@ o----------------------------------------------------------------o"
     }
 
     pub fn OnInit(&mut self, self_ref: Rc<RefCell<Demo>>) -> Result<()> {
+        self.camera
+            .setup((self.width as f32) / (self.height as f32), 2000.0);
+
+        self.tr.setup(self.width, self.height);
+        // self.cr.Setup(self.camera);
+        self.lr.Setup(graphics::WithCamera(&self.camera));
+        self.sr.as_ref().borrow_mut().setup(self.width, self.height);
+
         // load the cursor texture
         let strFilename = [self.strDatapath.as_str(), "cursor.raw"]
             .iter()
@@ -256,7 +268,7 @@ o----------------------------------------------------------------o"
         // initialize menu
         self.theMenu
             .borrow_mut()
-            .onInit(self_ref, self.width, self.height);
+            .onInit(self_ref, self.sr.clone(), self.width, self.height);
 
         // we're done
         println!(

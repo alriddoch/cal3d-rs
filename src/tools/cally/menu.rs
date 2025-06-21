@@ -1,8 +1,12 @@
 use once_cell::sync::Lazy;
 
+use crate::graphics::RendererError;
+use crate::graphics::{LineRenderer, WithOrtho};
+use crate::graphics::{Sprite, SpriteError};
+
+
 use super::demo::*;
 use super::graphics;
-use super::sprite::*;
 
 use std::cell::RefCell;
 use std::rc::Rc;
@@ -12,10 +16,10 @@ use std::{
 };
 
 pub struct Menu {
-    menuX: i32,
-    menuY: i32,
-    lodX: i32,
-    lodY: i32,
+    menuX: u32,
+    menuY: u32,
+    lodX: u32,
+    lodY: u32,
     bMotionMovement: bool,
     bLodMovement: bool,
     bSkeleton: i32,
@@ -33,8 +37,15 @@ pub struct Menu {
 }
 
 pub enum MenuError {
+    RendererError(RendererError),
     SpriteError(SpriteError),
     OtherError(String),
+}
+
+impl From<RendererError> for MenuError {
+    fn from(error: RendererError) -> Self {
+        MenuError::RendererError(error)
+    }
 }
 
 impl From<SpriteError> for MenuError {
@@ -59,7 +70,7 @@ impl Menu {
             bLodMovement: false,
             theDemo: None,
             sr: None,
-            lr: graphics::LineRenderer::new(),
+            lr: LineRenderer::new(),
 
             menu: Sprite::new(),
             lod: Sprite::new(),
@@ -70,30 +81,36 @@ impl Menu {
         &mut self,
         demo: Rc<RefCell<Demo>>,
         sprite_renderer: Rc<RefCell<graphics::SpriteRenderer>>,
-        width: i32,
-        height: i32,
+        width: u32,
+        height: u32,
     ) -> Result<(), MenuError> {
         self.theDemo = Some(demo);
         self.sr = Some(sprite_renderer);
 
         // load the menu texture
-        let strFilename = [demo.borrow().strDatapath.as_str(), "menu.raw"]
-            .iter()
-            .collect::<PathBuf>();
+        let strFilename = [
+            self.theDemo.as_ref().unwrap().borrow().strDatapath.as_str(),
+            "menu.raw",
+        ]
+        .iter()
+        .collect::<PathBuf>();
         // filepath.Join(demo.borrow().strDatapath, "menu.raw")
 
         self.menu.WithSpriteFile(strFilename).Setup()?;
-        self.sr.as_ref().unwrap().borrow().Bind(self.menu);
+        self.sr.as_ref().unwrap().borrow().bind(&self.menu);
 
         // load the lodxture
-        let strFilename = [demo.borrow().strDatapath.as_str(), "lod.raw"]
-            .iter()
-            .collect::<PathBuf>();
+        let strFilename = [
+            self.theDemo.as_ref().unwrap().borrow().strDatapath.as_str(),
+            "lod.raw",
+        ]
+        .iter()
+        .collect::<PathBuf>();
 
         self.lod.WithSpriteFile(strFilename).Setup()?;
-        self.sr.as_ref().unwrap().borrow().Bind(self.lod);
+        self.sr.as_ref().unwrap().borrow().bind(&self.lod);
 
-        self.lr.WithOrtho(width, height).Setup()?;
+        self.lr.Setup(&WithOrtho(width, height))?;
 
         self.onResize(width, height);
         return Ok(());
@@ -131,7 +148,7 @@ impl Menu {
     // Handle window resize event                                                 //
     // ----------------------------------------------------------------------------//
     // 429
-    fn onResize(&mut self, width: i32, _height: i32) {
+    fn onResize(&mut self, width: u32, _height: u32) {
         // adjust menu position
         self.menuX = width - 132;
 
