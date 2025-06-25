@@ -14,7 +14,7 @@ impl Sprite {
     pub fn WithSpriteFile(&mut self, buf: PathBuf) -> &mut Sprite {
         println!("Loading {buf:?}");
 
-        // s.spriteTexture, s.w, s.h, err = graphics.GetSprite(filename)
+        s.spriteTexture, s.w, s.h, err = graphics.GetSprite(filename);
         // if err != nil {
         // 	return errors.Wrapf(err, "SpriteRenderer texture load '%s' Error", filename)
         // }
