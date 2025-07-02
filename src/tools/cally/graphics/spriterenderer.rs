@@ -6,7 +6,7 @@ use gl;
 use crate::graphics::RendererError;
 
 use super::glslprogram::GLSLProgram;
-use crate::sprite::Sprite;
+use super::sprite::Sprite;
 
 use super::{font, font::*};
 

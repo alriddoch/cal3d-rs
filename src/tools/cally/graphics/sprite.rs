@@ -1,6 +1,15 @@
+use std::os::raw::c_void;
 use std::path::PathBuf;
 
-pub struct Sprite {}
+pub struct Sprite {
+    vao: u32,
+    vbo: u32,
+
+    w: i32,
+    h: i32,
+
+    spriteTexture: u32,
+}
 
 pub enum SpriteError {
     OtherError(String),
@@ -8,26 +17,89 @@ pub enum SpriteError {
 
 impl Sprite {
     pub fn new() -> Self {
-        Sprite {}
+        Sprite {
+            vao: 0,
+            vbo: 0,
+            w: 0,
+            h: 0,
+            spriteTexture: 0,
+        }
     }
 
     pub fn WithSpriteFile(&mut self, buf: PathBuf) -> &mut Sprite {
         println!("Loading {buf:?}");
 
-        // s.spriteTexture, s.w, s.h, err = graphics.GetSprite(filename)
+        self.spriteTexture, self.w, self.h, err = graphics.GetSprite(filename)
         // if err != nil {
         // 	return errors.Wrapf(err, "SpriteRenderer texture load '%s' Error", filename)
         // }
 
-        // glerr := gl.GetError()
-        // if glerr != gl.NO_ERROR {
+        // glerr := gl::GetError()
+        // if glerr != gl::NO_ERROR {
         // 	fmt.Printf("SpriteRenderer '%s' GL Error: %d", filename, glerr)
         // }
         // return nil
+        unimplemented!();
         self
     }
 
     pub fn Setup(&mut self) -> Result<(), SpriteError> {
         Ok(())
+    }
+
+    pub fn offsets(&self, vertexHandle: u32, texcoordHandle: u32) {
+        unsafe {
+            gl::BindVertexArray(self.vao);
+
+            gl::EnableVertexAttribArray(vertexHandle);
+            gl::EnableVertexAttribArray(texcoordHandle);
+
+            gl::VertexAttribPointer(vertexHandle, 2, gl::FLOAT, gl::FALSE, 0, std::ptr::null());
+            gl::VertexAttribPointer(
+                texcoordHandle,
+                2,
+                gl::FLOAT,
+                gl::FALSE,
+                0,
+                (4 * 2 * std::mem::size_of::<f32>()) as *const c_void,
+            );
+
+            gl::BindVertexArray(gl::ZERO)
+        }
+    }
+
+    pub fn bind(&self) {
+        unsafe {
+            gl::BindVertexArray(self.vao);
+
+            gl::BindBuffer(gl::ARRAY_BUFFER, self.vbo);
+            let vertices: [f32; 16] = [
+                0.0,
+                0.0,
+                self.w as f32,
+                0.0,
+                0.0,
+                self.h as f32,
+                self.w as f32,
+                self.h as f32,
+                0.0,
+                1.0,
+                1.0,
+                1.0,
+                0.0,
+                0.0,
+                1.0,
+                0.0,
+            ];
+            gl::BufferData(
+                gl::ARRAY_BUFFER,
+                std::mem::size_of_val(&vertices) as isize, //len(vertices)*int(unsafe.Sizeof(vertices[0])),
+                vertices.as_ptr().cast(),
+                gl::STREAM_DRAW,
+            );
+
+            gl::ActiveTexture(gl::TEXTURE0);
+            gl::BindTexture(gl::TEXTURE_2D, self.spriteTexture);
+        }
     }
 }
