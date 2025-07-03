@@ -29,7 +29,7 @@ impl Sprite {
     pub fn WithSpriteFile(&mut self, buf: PathBuf) -> &mut Sprite {
         println!("Loading {buf:?}");
 
-        self.spriteTexture, self.w, self.h, err = graphics.GetSprite(filename)
+        (self.spriteTexture, self.w, self.h, err) = graphics.GetSprite(filename);
         // if err != nil {
         // 	return errors.Wrapf(err, "SpriteRenderer texture load '%s' Error", filename)
         // }
@@ -44,6 +44,22 @@ impl Sprite {
     }
 
     pub fn Setup(&mut self) -> Result<(), SpriteError> {
+        unsafe {
+            gl::GenVertexArrays(1, &mut self.vao);
+            gl::BindVertexArray(self.vao);
+
+            gl::GenBuffers(1, &mut self.vbo);
+
+            gl::BindBuffer(gl::ARRAY_BUFFER, self.vbo);
+
+            gl::BindVertexArray(gl::ZERO);
+
+            let glerr = gl::GetError();
+
+            if glerr != gl::NO_ERROR {
+                println!("SpriteRenderer GL Error: {glerr}");
+            }
+        }
         Ok(())
     }
 
