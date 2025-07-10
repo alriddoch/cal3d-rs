@@ -5,8 +5,8 @@ pub struct Sprite {
     vao: u32,
     vbo: u32,
 
-    w: i32,
-    h: i32,
+    w: u32,
+    h: u32,
 
     spriteTexture: u32,
 }
@@ -26,20 +26,21 @@ impl Sprite {
         }
     }
 
-    pub fn WithSpriteFile(&mut self, buf: PathBuf) -> &mut Sprite {
-        println!("Loading {buf:?}");
+    pub fn WithSpriteFile(&mut self, filename: &PathBuf) -> &mut Sprite {
+        println!("Loading {filename:?}");
 
-        (self.spriteTexture, self.w, self.h, err) = graphics.GetSprite(filename);
-        // if err != nil {
-        // 	return errors.Wrapf(err, "SpriteRenderer texture load '%s' Error", filename)
-        // }
+        let sprite = super::get_sprite(filename);
+        if sprite.is_err() {
+            println!("Failed to load sprite: {filename:?}");
+        }
+        (self.spriteTexture, self.w, self.h) = sprite.unwrap();
 
-        // glerr := gl::GetError()
-        // if glerr != gl::NO_ERROR {
-        // 	fmt.Printf("SpriteRenderer '%s' GL Error: %d", filename, glerr)
-        // }
-        // return nil
-        unimplemented!();
+        let glerr = unsafe { gl::GetError() };
+
+        if glerr != gl::NO_ERROR {
+            println!("SpriteRenderer GL Error: {glerr}");
+        }
+
         self
     }
 

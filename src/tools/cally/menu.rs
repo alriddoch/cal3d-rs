@@ -4,7 +4,6 @@ use crate::graphics::RendererError;
 use crate::graphics::{LineRenderer, WithOrtho};
 use crate::graphics::{Sprite, SpriteError};
 
-
 use super::demo::*;
 use super::graphics;
 
@@ -96,7 +95,7 @@ impl Menu {
         .collect::<PathBuf>();
         // filepath.Join(demo.borrow().strDatapath, "menu.raw")
 
-        self.menu.WithSpriteFile(strFilename).Setup()?;
+        self.menu.WithSpriteFile(&strFilename).Setup()?;
         self.sr.as_ref().unwrap().borrow().bind(&self.menu);
 
         // load the lodxture
@@ -107,7 +106,7 @@ impl Menu {
         .iter()
         .collect::<PathBuf>();
 
-        self.lod.WithSpriteFile(strFilename).Setup()?;
+        self.lod.WithSpriteFile(&strFilename).Setup()?;
         self.sr.as_ref().unwrap().borrow().bind(&self.lod);
 
         self.lr.Setup(&WithOrtho(width, height))?;
