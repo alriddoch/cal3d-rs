@@ -8,11 +8,8 @@ use super::tick::*;
 use crate::graphics::{Sprite, SpriteError};
 
 use std::cell::RefCell;
+use std::path::PathBuf;
 use std::rc::Rc;
-use std::{
-    default,
-    path::{Path, PathBuf},
-};
 
 #[derive(Debug)]
 pub enum DemoError {

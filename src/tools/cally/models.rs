@@ -1,7 +1,4 @@
-use std::{
-    default,
-    path::{Path, PathBuf},
-};
+use std::path::PathBuf;
 
 use super::demo::DemoError;
 use super::model::*;

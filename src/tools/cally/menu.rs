@@ -1,4 +1,6 @@
-use once_cell::sync::Lazy;
+use std::cell::RefCell;
+use std::path::PathBuf;
+use std::rc::Rc;
 
 use crate::graphics::RendererError;
 use crate::graphics::{LineRenderer, WithOrtho};
@@ -6,13 +8,6 @@ use crate::graphics::{Sprite, SpriteError};
 
 use super::graphics;
 use super::models::*;
-
-use std::cell::RefCell;
-use std::rc::Rc;
-use std::{
-    default,
-    path::{Path, PathBuf},
-};
 
 pub struct Menu {
     menuX: u32,
