@@ -4,6 +4,7 @@ use super::graphics;
 use super::menu::*;
 use super::model::*;
 use super::tick::*;
+use crate::graphics::{Sprite, SpriteError};
 
 use std::cell::RefCell;
 use std::rc::Rc;
@@ -15,6 +16,7 @@ use std::{
 #[derive(Debug)]
 pub enum DemoError {
     ModelError(ModelError),
+    SpriteError(SpriteError),
     PathError,
     OtherError(String),
 }
@@ -23,6 +25,13 @@ impl From<ModelError> for DemoError {
     fn from(error: ModelError) -> Self {
         DemoError::ModelError(error)
     }
+}
+
+impl From<SpriteError> for DemoError {
+    fn from(error: SpriteError) -> Self {
+        DemoError::SpriteError(error)
+    }
+
 }
 
 type Result<T> = std::result::Result<T, DemoError>;
@@ -61,9 +70,6 @@ pub struct Demo {
     fpsDuration: f32,
     fpsFrames: i32,
     fps: i32,
-    cursorTextureId: u32,
-    logoTextureId: u32,
-    fpsTextureId: u32,
     mouseX: i32,
     mouseY: i32,
     tiltAngle: f32,
@@ -92,6 +98,10 @@ pub struct Demo {
     tr: graphics::TextRenderer,
     lr: graphics::LineRenderer,
     sr: Rc<RefCell<graphics::SpriteRenderer>>,
+
+    cursor: Sprite,
+    logo: Sprite,
+    fps_sprite: Sprite,
 }
 
 fn loadTexture(filename: &str) -> Result<u32> {
@@ -114,9 +124,6 @@ impl Demo {
             distance: 270.0,
             strDatapath: String::from("data/"),
             screen: graphics::Screen::new("foo", 800, 600)?,
-            cursorTextureId: 0,
-            logoTextureId: 0,
-            fpsTextureId: 0,
             mouseX: 0,
             mouseY: 0,
             bLeftMouseButtonDown: false,
@@ -139,7 +146,10 @@ impl Demo {
             tr: graphics::TextRenderer::new(),
             lr: graphics::LineRenderer::new(),
             sr: Rc::new(RefCell::new(graphics::SpriteRenderer::new())),
-            // ..Default::default()
+
+            cursor: Sprite::new(),
+            logo: Sprite::new(),
+            fps_sprite: Sprite::new(),
         })
     }
 
@@ -179,25 +189,22 @@ o----------------------------------------------------------------o"
         let strFilename = [self.strDatapath.as_str(), "cursor.raw"]
             .iter()
             .collect::<PathBuf>();
-        let strFilename = strFilename.to_str().ok_or(DemoError::PathError)?;
 
-        self.cursorTextureId = loadTexture(strFilename)?;
+        self.cursor.WithSpriteFile(&strFilename).Setup()?;
 
         // load the logo texture
         let strFilename = [self.strDatapath.as_str(), "logo.raw"]
             .iter()
             .collect::<PathBuf>();
-        let strFilename = strFilename.to_str().ok_or(DemoError::PathError)?;
 
-        self.logoTextureId = loadTexture(strFilename)?;
+        self.logo.WithSpriteFile(&strFilename).Setup()?;
 
         // load the fps texture
         let strFilename = [self.strDatapath.as_str(), "fps.raw"]
             .iter()
             .collect::<PathBuf>();
-        let strFilename = strFilename.to_str().ok_or(DemoError::PathError)?;
 
-        self.fpsTextureId = loadTexture(strFilename)?;
+        self.fps_sprite.WithSpriteFile(&strFilename).Setup()?;
 
         // initialize models
         println!("Loading 'cally' model ...");

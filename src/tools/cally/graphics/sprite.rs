@@ -11,6 +11,7 @@ pub struct Sprite {
     spriteTexture: u32,
 }
 
+#[derive(Debug)]
 pub enum SpriteError {
     OtherError(String),
 }

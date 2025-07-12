@@ -1,17 +1,51 @@
+use byteorder::{NativeEndian, ReadBytesExt};
 use gl;
-
+use std::fs::File;
+use std::io::{BufReader, Read};
 use std::os::raw::c_void;
 use std::path::PathBuf;
 
-fn image_load(filename: &PathBuf) -> Result<image::DynamicImage, String> {
-    Ok(image::open(filename).expect("Failed to load texture"))
+fn image_load(filename: &PathBuf) -> Result<image::DynamicImage, std::io::Error> {
+    Ok(image::open(filename).expect(format!("Failed to load texture {filename:?}").as_str()))
 }
 
-fn load_raw(_filename: &PathBuf) -> Result<image::DynamicImage, String> {
-    unimplemented!();
+fn load_raw(filename: &PathBuf) -> Result<image::DynamicImage, std::io::Error> {
+    let mut buffer = BufReader::new(
+        File::open(filename).expect(format!("Failed to load raw texture {filename:?}").as_str()),
+    );
+
+    let width = buffer.read_u32::<NativeEndian>()?;
+    let height = buffer.read_u32::<NativeEndian>()?;
+    let depth = buffer.read_i32::<NativeEndian>()?;
+
+    println!("Got {width} {height} {depth}");
+
+    let dyn_image = match depth {
+        3 => {
+            let mut img = image::RgbImage::new(width, height);
+
+            buffer.read_exact(img.as_mut())?;
+
+            image::DynamicImage::ImageRgb8(img)
+        }
+        4 => {
+            let mut img = image::RgbaImage::new(width, height);
+
+            buffer.read_exact(img.as_mut())?;
+
+            image::DynamicImage::ImageRgba8(img)
+        }
+        _ => return Err(std::io::Error::new(std::io::ErrorKind::Other, "oh no!")),
+    };
+
+    Ok(dyn_image)
 }
 
-fn load_texture(img: &image::DynamicImage, wrap: bool, _filter: u32) -> Result<u32, String> {
+fn load_texture(
+    img: &image::DynamicImage,
+    wrap: bool,
+    _filter: u32,
+) -> Result<u32, std::io::Error> {
     let data = img.as_bytes();
     let mut texture = 0;
     let (format, pxtype) = match img.color() {
@@ -56,7 +90,7 @@ fn load_texture(img: &image::DynamicImage, wrap: bool, _filter: u32) -> Result<u
     Ok(texture)
 }
 
-fn load_sprite(img: &image::DynamicImage) -> Result<(u32, u32, u32), String> {
+fn load_sprite(img: &image::DynamicImage) -> Result<(u32, u32, u32), std::io::Error> {
     let data = img.as_bytes();
     let mut texture = 0;
     let (format, pxtype) = match img.color() {
@@ -91,14 +125,14 @@ fn load_sprite(img: &image::DynamicImage) -> Result<(u32, u32, u32), String> {
     Ok((texture, img.width(), img.height()))
 }
 
-pub fn get_texture(filename: &PathBuf, wrap: bool, filter: u32) -> Result<u32, String> {
+pub fn get_texture(filename: &PathBuf, wrap: bool, filter: u32) -> Result<u32, std::io::Error> {
     let rgba = image_load(filename)?;
 
     return load_texture(&rgba, wrap, filter);
 }
 
-pub fn get_sprite(filename: &PathBuf) -> Result<(u32, u32, u32), String> {
-    let rgba = if filename.ends_with(".raw") {
+pub fn get_sprite(filename: &PathBuf) -> Result<(u32, u32, u32), std::io::Error> {
+    let rgba = if filename.extension().unwrap() == "raw" {
         load_raw(filename)
     } else {
         image_load(filename)
