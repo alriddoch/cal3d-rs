@@ -31,7 +31,6 @@ impl From<SpriteError> for DemoError {
     fn from(error: SpriteError) -> Self {
         DemoError::SpriteError(error)
     }
-
 }
 
 type Result<T> = std::result::Result<T, DemoError>;
@@ -273,9 +272,13 @@ o----------------------------------------------------------------o"
         println!("");
 
         // initialize menu
-        self.theMenu
-            .borrow_mut()
-            .onInit(self_ref, self.sr.clone(), self.width, self.height);
+        self.theMenu.borrow_mut().onInit(
+            self_ref,
+            self.sr.clone(),
+            self.strDatapath.as_str(),
+            self.width,
+            self.height,
+        );
 
         // we're done
         println!(

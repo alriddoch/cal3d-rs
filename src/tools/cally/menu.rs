@@ -80,6 +80,7 @@ impl Menu {
         &mut self,
         demo: Rc<RefCell<Demo>>,
         sprite_renderer: Rc<RefCell<graphics::SpriteRenderer>>,
+        path: &str,
         width: u32,
         height: u32,
     ) -> Result<(), MenuError> {
@@ -87,24 +88,14 @@ impl Menu {
         self.sr = Some(sprite_renderer);
 
         // load the menu texture
-        let strFilename = [
-            self.theDemo.as_ref().unwrap().borrow().strDatapath.as_str(),
-            "menu.raw",
-        ]
-        .iter()
-        .collect::<PathBuf>();
+        let strFilename = [path, "menu.raw"].iter().collect::<PathBuf>();
         // filepath.Join(demo.borrow().strDatapath, "menu.raw")
 
         self.menu.WithSpriteFile(&strFilename).Setup()?;
         self.sr.as_ref().unwrap().borrow().bind(&self.menu);
 
         // load the lodxture
-        let strFilename = [
-            self.theDemo.as_ref().unwrap().borrow().strDatapath.as_str(),
-            "lod.raw",
-        ]
-        .iter()
-        .collect::<PathBuf>();
+        let strFilename = [path, "lod.raw"].iter().collect::<PathBuf>();
 
         self.lod.WithSpriteFile(&strFilename).Setup()?;
         self.sr.as_ref().unwrap().borrow().bind(&self.lod);
