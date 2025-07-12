@@ -3,6 +3,7 @@ use clap::Parser;
 use super::graphics;
 use super::menu::*;
 use super::model::*;
+use super::models::*;
 use super::tick::*;
 use crate::graphics::{Sprite, SpriteError};
 
@@ -79,8 +80,6 @@ pub struct Demo {
     lastTick: u128,
     pub strDatapath: String,
     strCal3D_Datapath: String,
-    vectorModel: Vec<Model>,
-    currentModel: usize,
     bPaused: bool,
     averageCPUTime: f32,
     bOutputAverageCPUTimeAtExit: bool,
@@ -91,6 +90,7 @@ pub struct Demo {
     bFirst: bool,
     cumul: f64,
 
+    theModels: Rc<RefCell<Models>>,
     theMenu: Rc<RefCell<Menu>>,
     screen: graphics::Screen,
     camera: graphics::Camera,
@@ -129,8 +129,6 @@ impl Demo {
             bRightMouseButtonDown: false,
             lastTick: 0,
             strCal3D_Datapath: String::from(""),
-            vectorModel: Vec::new(),
-            currentModel: 0,
             bPaused: false,
             averageCPUTime: 0.0,
             bOutputAverageCPUTimeAtExit: false,
@@ -140,6 +138,7 @@ impl Demo {
             lastTime: 0.0,
             bFirst: true,
             cumul: 0.0,
+            theModels: Rc::new(RefCell::new(Models::new())),
             theMenu: Rc::new(RefCell::new(Menu::new())),
             camera: graphics::Camera::new(),
             tr: graphics::TextRenderer::new(),
@@ -175,7 +174,7 @@ o----------------------------------------------------------------o"
         Ok(())
     }
 
-    pub fn OnInit(&mut self, self_ref: Rc<RefCell<Demo>>) -> Result<()> {
+    pub fn OnInit(&mut self) -> Result<()> {
         self.camera
             .setup((self.width as f32) / (self.height as f32), 2000.0);
 
@@ -205,75 +204,13 @@ o----------------------------------------------------------------o"
 
         self.fps_sprite.WithSpriteFile(&strFilename).Setup()?;
 
-        // initialize models
-        println!("Loading 'cally' model ...");
-
-        let path = match self.strCal3D_Datapath.as_str() {
-            "" => PathBuf::new(),
-            _ => [self.strCal3D_Datapath.as_str(), "cally"]
-                .iter()
-                .collect::<PathBuf>(),
-        };
-
-        let mut pModel = Model::new(path);
-
-        let cally_path = [self.strDatapath.as_str(), "cally.cfg"]
-            .iter()
-            .collect::<PathBuf>();
-        let cally_path = cally_path.to_str().ok_or(DemoError::PathError)?;
-        pModel.onInit(cally_path)?;
-
-        self.vectorModel.push(pModel);
-
-        println!("");
-
-        // load 'skeleton' model
-        println!("Loading 'skeleton' model ...");
-
-        let path = match self.strCal3D_Datapath.as_str() {
-            "" => PathBuf::new(),
-            _ => [self.strCal3D_Datapath.as_str(), "skeleton"]
-                .iter()
-                .collect::<PathBuf>(),
-        };
-
-        let mut pModel = Model::new(path);
-
-        let skeleton_path = [self.strDatapath.as_str(), "skeleton.cfg"]
-            .iter()
-            .collect::<PathBuf>();
-        let skeleton_path = skeleton_path.to_str().ok_or(DemoError::PathError)?;
-        pModel.onInit(skeleton_path)?;
-
-        self.vectorModel.push(pModel);
-
-        println!("");
-
-        // load 'paladin' model
-        println!("Loading 'paladin' model ...");
-
-        let path = match self.strCal3D_Datapath.as_str() {
-            "" => PathBuf::new(),
-            _ => [self.strCal3D_Datapath.as_str(), "paladin"]
-                .iter()
-                .collect::<PathBuf>(),
-        };
-
-        let mut pModel = Model::new(path);
-
-        let paladin_path = [self.strDatapath.as_str(), "paladin.cfg"]
-            .iter()
-            .collect::<PathBuf>();
-        let paladin_path = paladin_path.to_str().ok_or(DemoError::PathError)?;
-        pModel.onInit(paladin_path)?;
-
-        self.vectorModel.push(pModel);
-
-        println!("");
+        self.theModels
+            .borrow_mut()
+            .init(self.strDatapath.as_str())?;
 
         // initialize menu
         self.theMenu.borrow_mut().onInit(
-            self_ref,
+            self.theModels.clone(),
             self.sr.clone(),
             self.strDatapath.as_str(),
             self.width,
@@ -326,8 +263,8 @@ Quit the demo by pressing 'q' or ESC
 
         // update the current model
         if !self.bPaused {
+            self.theModels.borrow_mut().idle(elapsedSeconds);
             //for (int i = 0; i < 10; i++)
-            self.vectorModel[self.currentModel].onUpdate(elapsedSeconds);
         }
 
         let mut stop = getTime();

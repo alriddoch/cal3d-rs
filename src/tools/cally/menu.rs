@@ -4,8 +4,8 @@ use crate::graphics::RendererError;
 use crate::graphics::{LineRenderer, WithOrtho};
 use crate::graphics::{Sprite, SpriteError};
 
-use super::demo::*;
 use super::graphics;
+use super::models::*;
 
 use std::cell::RefCell;
 use std::rc::Rc;
@@ -26,7 +26,7 @@ pub struct Menu {
     bLight: bool,
     actionTimespan: [f32; 2],
     nextTimespan: f32,
-    theDemo: Option<Rc<RefCell<Demo>>>,
+    theModels: Option<Rc<RefCell<Models>>>,
 
     sr: Option<Rc<RefCell<graphics::SpriteRenderer>>>,
     lr: graphics::LineRenderer,
@@ -67,7 +67,7 @@ impl Menu {
             lodX: 4,
             lodY: 4,
             bLodMovement: false,
-            theDemo: None,
+            theModels: None,
             sr: None,
             lr: LineRenderer::new(),
 
@@ -78,13 +78,13 @@ impl Menu {
 
     pub fn onInit(
         &mut self,
-        demo: Rc<RefCell<Demo>>,
+        models: Rc<RefCell<Models>>,
         sprite_renderer: Rc<RefCell<graphics::SpriteRenderer>>,
         path: &str,
         width: u32,
         height: u32,
     ) -> Result<(), MenuError> {
-        self.theDemo = Some(demo);
+        self.theModels = Some(models);
         self.sr = Some(sprite_renderer);
 
         // load the menu texture
