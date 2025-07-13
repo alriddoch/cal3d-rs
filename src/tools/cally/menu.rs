@@ -1,4 +1,9 @@
+use cgmath::Matrix4;
+use cgmath::SquareMatrix;
+use cgmath::Vector3;
+use cgmath::{Deg, Rad};
 use std::cell::RefCell;
+use std::ops::Mul;
 use std::path::PathBuf;
 use std::rc::Rc;
 
@@ -10,8 +15,8 @@ use super::graphics;
 use super::models::*;
 
 pub struct Menu {
-    menuX: u32,
-    menuY: u32,
+    menuX: i32,
+    menuY: i32,
     lodX: u32,
     lodY: u32,
     bMotionMovement: bool,
@@ -48,6 +53,11 @@ impl From<SpriteError> for MenuError {
         MenuError::SpriteError(error)
     }
 }
+
+const MENUITEM_Y: [i32; 5] = [228, 200, 94, 66, 38];
+const MENUITEM_HEIGHT: [i32; 5] = [28, 28, 106, 28, 28];
+const MENUITEM_MOTION_X: [i32; 3] = [42, 80, 118];
+const MENUITEM_MOTION_Y: [i32; 3] = [168, 102, 168];
 
 impl Menu {
     pub fn new() -> Self {
@@ -102,6 +112,114 @@ impl Menu {
         return Ok(());
     }
 
+    pub fn onRender(&self) {
+        let sr = self.sr.as_ref().unwrap().borrow();
+        sr.set_state();
+
+        let mview = Matrix4::<f32>::identity().mul(Matrix4::from_translation(Vector3 {
+            x: self.menuX as f32,
+            y: self.menuY as f32,
+            z: 0.0,
+        }));
+
+        sr.set_sprite(&self.menu);
+        self.menu.set_area(0, 0, 128, 256, 128, 0);
+        sr.draw(&mview);
+
+        let state = self.theModels.as_ref().unwrap().borrow().get_model_state();
+
+        let startY = MENUITEM_Y[state as usize];
+        let diffY = MENUITEM_HEIGHT[state as usize];
+
+        self.menu
+            .set_area(0, startY as u32, 128, diffY as u32, 0, 0);
+        sr.draw(&mview);
+
+        if self.actionTimespan[0] > 0.0 {
+            let startY = MENUITEM_Y[3];
+            let diffY = MENUITEM_HEIGHT[3];
+            self.menu
+                .set_area(0, startY as u32, 128, diffY as u32, 0, 0);
+            sr.draw(&mview);
+        }
+
+        if self.actionTimespan[1] > 0.0 {
+            let startY = MENUITEM_Y[4];
+            let diffY = MENUITEM_HEIGHT[4];
+            self.menu
+                .set_area(0, startY as u32, 128, diffY as u32, 0, 0);
+            sr.draw(&mview);
+        }
+
+        if self.bSkeleton != 0 {
+            self.menu.set_area(0, 0, 32, 35, 0, 0);
+            sr.draw(&mview);
+        }
+
+        if self.bWireframe {
+            self.menu.set_area(32, 0, 32, 35, 0, 0);
+            sr.draw(&mview);
+        }
+
+        if self.bLight {
+            self.menu.set_area(64, 0, 32, 35, 0, 0);
+            sr.draw(&mview);
+        }
+
+        if self.nextTimespan > 0.0 {
+            self.menu.set_area(96, 0, 32, 35, 0, 0);
+            sr.draw(&mview);
+        }
+
+        sr.reset_state();
+
+        // Render lod
+
+        let models = self.theModels.as_ref().unwrap().borrow();
+        // Render motion triangle
+        let motionBlend = models.getMotionBlend();
+
+        // calculate the current motion point
+        let motionX = (motionBlend[0] * MENUITEM_MOTION_X[0] as f32
+            + motionBlend[1] * MENUITEM_MOTION_X[1] as f32
+            + motionBlend[2] * MENUITEM_MOTION_X[2] as f32) as i32;
+        let motionY = (motionBlend[0] * MENUITEM_MOTION_Y[0] as f32
+            + motionBlend[1] * MENUITEM_MOTION_Y[1] as f32
+            + motionBlend[2] * MENUITEM_MOTION_Y[2] as f32) as i32;
+
+        let view = Matrix4::<f32>::identity();
+        self.lr.set_state(&view);
+
+        let mview = Matrix4::<f32>::identity();
+
+        self.lr.draw(
+            &mview,
+            self.menuX + MENUITEM_MOTION_X[0],
+            self.menuY + MENUITEM_MOTION_Y[0],
+            self.menuX + motionX,
+            self.menuY + motionY,
+            &[1.0, 1.0, 0.0, 1.0],
+        );
+        self.lr.draw(
+            &mview,
+            self.menuX + MENUITEM_MOTION_X[1],
+            self.menuY + MENUITEM_MOTION_Y[1],
+            self.menuX + motionX,
+            self.menuY + motionY,
+            &[0.0, 1.0, 1.0, 1.0],
+        );
+        self.lr.draw(
+            &mview,
+            self.menuX + MENUITEM_MOTION_X[2],
+            self.menuY + MENUITEM_MOTION_Y[2],
+            self.menuX + motionX,
+            self.menuY + motionY,
+            &[1.0, 0.0, 1.0, 1.0],
+        );
+
+        self.lr.reset_state();
+    }
+
     // ----------------------------------------------------------------------------//
     // Update the menu                                                            //
     // ----------------------------------------------------------------------------//
@@ -136,7 +254,7 @@ impl Menu {
     // 429
     fn onResize(&mut self, width: u32, _height: u32) {
         // adjust menu position
-        self.menuX = width - 132;
+        self.menuX = (width - 132) as i32;
 
         // adjust lod position
         self.lodX = width / 2 - 128;

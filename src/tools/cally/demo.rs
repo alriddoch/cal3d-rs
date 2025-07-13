@@ -1,7 +1,6 @@
 use cgmath::Matrix4;
 use cgmath::SquareMatrix;
 use cgmath::Vector3;
-use cgmath::prelude::*;
 use cgmath::{Deg, Rad};
 use clap::Parser;
 use std::cell::RefCell;
@@ -330,11 +329,20 @@ Quit the demo by pressing 'q' or ESC
                 z: -90.0 * render_scale,
             }));
 
-            self.theModels.borrow().render(&view);
+        // self.theModels.borrow().render(&view);
     }
 
     fn onRenderInterface(&self) {
         self.screen.overlay();
-        unimplemented!();
+
+        unsafe {
+            gl::Disable(gl::DEPTH_TEST);
+        }
+
+        self.theMenu.borrow().onRender();
+
+        // TODO: more stuff
+
+        // unimplemented!();
     }
 }

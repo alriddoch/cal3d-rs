@@ -1,13 +1,13 @@
 use cgmath::Matrix4;
 use std::path::PathBuf;
 
-const STATE_IDLE: i32 = 0;
-const STATE_FANCY: i32 = 1;
-const STATE_MOTION: i32 = 2;
+const STATE_IDLE: u32 = 0;
+const STATE_FANCY: u32 = 1;
+const STATE_MOTION: u32 = 2;
 
 #[derive(Default)]
 pub struct Model {
-    m_state: i32,
+    pub(crate) state: u32,
     calCoreModel: cal3d::core::CalCoreModel,
     calModel: cal3d::CalModel,
     animationId: [i32; 16],
@@ -16,7 +16,7 @@ pub struct Model {
     meshCount: i32,
     textureId: [u32; 32],
     textureCount: i32,
-    motionBlend: [f32; 3],
+    pub(crate)motionBlend: [f32; 3],
     renderScale: f32,
     lodLevel: f32,
     path: PathBuf,
@@ -74,7 +74,7 @@ impl From<cal3d::core::LoaderError> for ModelError {
 impl Model {
     pub fn new(path: PathBuf) -> Self {
         Model {
-            m_state: STATE_IDLE,
+            state: STATE_IDLE,
             motionBlend: [0.6, 0.1, 0.3],
             renderScale: 1.0,
             lodLevel: 1.0,

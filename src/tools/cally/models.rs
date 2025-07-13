@@ -86,4 +86,12 @@ impl Models {
     pub fn render(&self, view: &Matrix4<f32>) {
         self.vectorModel[self.currentModel].render(view)
     }
+
+    pub fn get_model_state(&self) -> u32 {
+        self.vectorModel[self.currentModel].state
+    }
+
+    pub fn getMotionBlend(&self) -> &[f32;3] {
+        &self.vectorModel[self.currentModel].motionBlend
+    }
 }

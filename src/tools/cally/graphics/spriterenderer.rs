@@ -90,7 +90,7 @@ impl SpriteRenderer {
         sprite.bind();
     }
 
-    pub fn reset_state() {
+    pub fn reset_state(&self) {
         unsafe {
             gl::Disable(gl::BLEND);
             gl::BindVertexArray(gl::ZERO);

@@ -1,7 +1,7 @@
 use std::ptr;
 
-use cgmath::prelude::*;
 use cgmath::Matrix4;
+use cgmath::prelude::*;
 use gl;
 
 use super::camera::Camera;
@@ -17,7 +17,7 @@ pub struct LineRenderer {
     view_handle: i32,
     model_handle: i32,
     vertex_pos_handle: i32,
-    color_handle: u32,
+    color_handle: i32,
 }
 
 pub fn WithOrtho(screen_width: u32, screen_height: u32) -> Matrix4<f32> {
@@ -80,8 +80,7 @@ impl LineRenderer {
             }
 
             self.color_handle =
-                gl::GetUniformLocation(self.program.id(), "color\x00".as_bytes().as_ptr().cast())
-                    as u32;
+                gl::GetUniformLocation(self.program.id(), "color\x00".as_bytes().as_ptr().cast());
 
             gl::UseProgram(self.program.id());
 
@@ -102,4 +101,63 @@ impl LineRenderer {
             Ok(())
         }
     }
+
+    pub fn set_state(&self, view: &Matrix4<f32>) {
+        unsafe {
+            gl::UseProgram(self.program.id());
+
+            gl::UniformMatrix4fv(self.view_handle, 1, gl::FALSE, view.as_ptr());
+
+            gl::BindVertexArray(self.vao);
+            gl::BindBuffer(gl::ARRAY_BUFFER, self.vbo);
+        }
+    }
+
+    pub fn reset_state(&self) {
+        unsafe {
+            gl::BindVertexArray(gl::ZERO);
+        }
+    }
+
+    pub fn draw(&self, model: &Matrix4<f32>, x: i32, y: i32, w: i32, h: i32, color: &[f32; 4]) {
+        let vertices: [f32; 6] = [
+            (x) as f32,
+            (y) as f32,
+            0.0,
+            (w) as f32,
+            (h) as f32,
+            0.0,
+            //int32(x), int32(y), int32(w), int32(h),
+        ];
+
+        unsafe {
+            gl::BufferData(
+                gl::ARRAY_BUFFER,
+                std::mem::size_of_val(&vertices) as isize,
+                vertices.as_ptr().cast(),
+                gl::STREAM_DRAW,
+            );
+
+            // color := [...]float32{1., 1., 0.5, 1.0}
+            gl::Uniform4fv(self.color_handle, 1, color.as_ptr());
+
+            gl::UniformMatrix4fv(self.model_handle, 1, gl::FALSE, model.as_ptr());
+            gl::DrawArrays(gl::LINES, 0, 2);
+        }
+    }
+
+    // pub fn Draw3D(&self, model: &Matrix4<f32>, vertices []float32, color []float32) {
+    //     unsafe {
+    // 	gl::BufferData(gl::ARRAY_BUFFER,
+    // 		std::mem::size_of_val(&vertices) as isize,
+    // 		vertices.as_ptr().cast(),
+    // 		gl::STREAM_DRAW);
+
+    // 	// color := [...]float32{1., 1., 0.5, 1.0}
+    // 	gl::Uniform4fv(self.colorHandle, 1, &color[0]);
+
+    // 	gl::UniformMatrix4fv(self.modelHandle, 1, false, &model[0]);
+    // 	gl::DrawArrays(gl::LINES, 0, 2);
+    //     }
+    // }
 }

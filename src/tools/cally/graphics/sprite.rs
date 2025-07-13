@@ -120,4 +120,45 @@ impl Sprite {
             gl::BindTexture(gl::TEXTURE_2D, self.spriteTexture);
         }
     }
+
+    pub fn set_area(&self, x: u32, y: u32, w: u32, h: u32, xoff: u32, yoff: u32) {
+        if x + w > self.w {
+            println!("Invalid x or w {x} {w} - {}", self.w);
+        }
+
+        if y + h > self.h {
+            println!("Invalid y or h {y} {h} - {}", self.h);
+        }
+
+        let (fx, fy, fw, fh) = (x as f32, y as f32, w as f32, h as f32);
+        let (sw, sh) = (self.w as f32, self.h as f32);
+        let fxo = xoff as f32;
+
+        let vertices: [f32; 16] = [
+            fx,
+            fy,
+            fx + fw,
+            fy,
+            fx,
+            fy + fh,
+            fx + fw,
+            fy + fh,
+            (fx + fxo) / sw,
+            (sh - fy) / sh,
+            (fx + fxo + fw) / sw,
+            (sh - fy) / sh,
+            (fx + fxo) / sw,
+            (sh - fy - fh) / sh,
+            (fx + fxo + fw) / sw,
+            (sh - fy - fh) / sh,
+        ];
+        unsafe {
+            gl::BufferData(
+                gl::ARRAY_BUFFER,
+                std::mem::size_of_val(&vertices) as isize,
+                vertices.as_ptr().cast(),
+                gl::STREAM_DRAW,
+            )
+        }
+    }
 }
