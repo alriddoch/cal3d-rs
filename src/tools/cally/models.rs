@@ -1,3 +1,4 @@
+use cgmath::Matrix4;
 use std::path::PathBuf;
 
 use super::demo::DemoError;
@@ -76,5 +77,13 @@ impl Models {
 
     pub(crate) fn idle(&mut self, elapsedSeconds: f32) {
         self.vectorModel[self.currentModel].onUpdate(elapsedSeconds);
+    }
+
+    pub fn render_scale(&self) -> f32 {
+        self.vectorModel[self.currentModel].getRenderScale()
+    }
+
+    pub fn render(&self, view: &Matrix4<f32>) {
+        self.vectorModel[self.currentModel].render(view)
     }
 }

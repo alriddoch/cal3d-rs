@@ -1,3 +1,4 @@
+use cgmath::Matrix4;
 use std::path::PathBuf;
 
 const STATE_IDLE: i32 = 0;
@@ -175,5 +176,13 @@ impl Model {
         // }
         // // update the model
         // s.calModel.Update(elapsedSeconds)
+    }
+
+    pub fn getRenderScale(&self) -> f32 {
+        self.renderScale
+    }
+
+    pub fn render(&self, view: &Matrix4<f32>) {
+        unimplemented!();
     }
 }

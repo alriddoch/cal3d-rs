@@ -1,4 +1,13 @@
+use cgmath::Matrix4;
+use cgmath::SquareMatrix;
+use cgmath::Vector3;
+use cgmath::prelude::*;
+use cgmath::{Deg, Rad};
 use clap::Parser;
+use std::cell::RefCell;
+use std::ops::Mul;
+use std::path::PathBuf;
+use std::rc::Rc;
 
 use super::graphics;
 use super::menu::*;
@@ -7,16 +16,19 @@ use super::models::*;
 use super::tick::*;
 use crate::graphics::{Sprite, SpriteError};
 
-use std::cell::RefCell;
-use std::path::PathBuf;
-use std::rc::Rc;
-
 #[derive(Debug)]
 pub enum DemoError {
+    MenuError(MenuError),
     ModelError(ModelError),
     SpriteError(SpriteError),
     PathError,
     OtherError(String),
+}
+
+impl From<MenuError> for DemoError {
+    fn from(error: MenuError) -> Self {
+        DemoError::MenuError(error)
+    }
 }
 
 impl From<ModelError> for DemoError {
@@ -212,7 +224,7 @@ o----------------------------------------------------------------o"
             self.strDatapath.as_str(),
             self.width,
             self.height,
-        );
+        )?;
 
         // we're done
         println!(
@@ -229,8 +241,8 @@ Quit the demo by pressing 'q' or ESC
         loop {
             self.onIdle();
 
-            // self.onRender();
-            // self.onRenderInterface();
+            self.onRender();
+            self.onRenderInterface();
             self.screen.swap();
         }
     }
@@ -283,5 +295,46 @@ Quit the demo by pressing 'q' or ESC
 
         // update the screen
         //glutPostRedisplay()
+    }
+
+    fn onRender(&self) {
+        self.screen.world();
+
+        let render_scale = self.theModels.borrow().render_scale();
+
+        let view = Matrix4::<f32>::identity()
+            .mul(Matrix4::from_translation(Vector3 {
+                x: 0.0,
+                y: 0.0,
+                z: -self.distance * render_scale,
+            }))
+            .mul(Matrix4::from_axis_angle(
+                Vector3 {
+                    x: 1.0,
+                    y: 0.0,
+                    z: 0.0,
+                },
+                Rad::from(Deg(self.tiltAngle)),
+            )) // view.Rotate(-65, 1, 0, 0)
+            .mul(Matrix4::from_axis_angle(
+                Vector3 {
+                    x: 0.0,
+                    y: 0.0,
+                    z: 1.0,
+                },
+                Rad::from(Deg(self.twistAngle)),
+            ))
+            .mul(Matrix4::from_translation(Vector3 {
+                x: 0.0,
+                y: 0.0,
+                z: -90.0 * render_scale,
+            }));
+
+            self.theModels.borrow().render(&view);
+    }
+
+    fn onRenderInterface(&self) {
+        self.screen.overlay();
+        unimplemented!();
     }
 }

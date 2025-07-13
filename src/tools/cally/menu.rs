@@ -30,6 +30,7 @@ pub struct Menu {
     lod: Sprite,
 }
 
+#[derive(Debug)]
 pub enum MenuError {
     RendererError(RendererError),
     SpriteError(SpriteError),
