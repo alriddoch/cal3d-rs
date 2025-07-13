@@ -3,6 +3,8 @@ use cgmath::SquareMatrix;
 use cgmath::Vector3;
 use cgmath::{Deg, Rad};
 use clap::Parser;
+use glfw::Action;
+use glfw::Key;
 use std::cell::RefCell;
 use std::ops::Mul;
 use std::path::PathBuf;
@@ -72,6 +74,7 @@ pub struct Cli {
 
 // #[derive(Default)]
 pub struct Demo {
+    done: bool,
     width: u32,
     height: u32,
     bFullscreen: bool,
@@ -120,6 +123,7 @@ fn loadTexture(filename: &str) -> Result<u32> {
 impl Demo {
     pub fn new() -> Result<Self> {
         Ok(Demo {
+            done: false,
             width: 640,
             height: 480,
             bFullscreen: false,
@@ -238,11 +242,53 @@ Quit the demo by pressing 'q' or ESC
 
     pub fn Loop(&mut self) {
         loop {
+            self.handle_events();
             self.onIdle();
 
             self.onRender();
             self.onRenderInterface();
             self.screen.swap();
+
+            if self.done {
+                break;
+            }
+        }
+    }
+
+    fn handle_events(&mut self) {
+        use glfw::WindowEvent;
+
+        let messages = self.screen.messages();
+
+        // let mut done = false;
+
+        for (_, event) in messages {
+            // done = done || self.keys.glfw_handle_event(event);
+            match event {
+                WindowEvent::Key(key, _, action, _) => {
+                    println!("key: {event:?}");
+                    // self.key_event(key, action);
+                }
+                WindowEvent::MouseButton(button, action, _) => {
+                    println!("mouse_button: {event:?}");
+                    // self.button_event(button, action);
+                }
+                WindowEvent::CursorPos(x, y) => {
+                    println!("cursor_pos: {event:?}");
+                    // self.cursor_event(x, y);
+                }
+                WindowEvent::Size(width, height) => {
+                    println!("size: {event:?}");
+                    // self.size_event(width, height);
+                }
+                WindowEvent::Close => {
+                    println!("close: {event:?}");
+                    self.done = true;
+                }
+                _ => {
+                    println!("other: {event:?}");
+                }
+            }
         }
     }
 
@@ -295,6 +341,14 @@ Quit the demo by pressing 'q' or ESC
         // update the screen
         //glutPostRedisplay()
     }
+
+    fn key_event(&mut self, key: Key, action: Action) {}
+
+    fn button_event(&mut self, button: glfw::MouseButton, action: Action) {}
+
+    fn cursor_event(&mut self, x: f64, y: f64) {}
+
+    fn size_event(&mut self, width: i32, height: i32) {}
 
     fn onRender(&self) {
         self.screen.world();
