@@ -72,26 +72,29 @@ pub struct Cli {
     bench: bool,
 }
 
+pub struct DemoControls {
+    done: bool,
+    mouseX: i32,
+    mouseY: i32,
+    bPaused: bool,
+    bLeftMouseButtonDown: bool,
+    bRightMouseButtonDown: bool,
+}
+
 // #[derive(Default)]
 pub struct Demo {
-    done: bool,
     width: u32,
     height: u32,
     bFullscreen: bool,
     fpsDuration: f32,
     fpsFrames: i32,
     fps: i32,
-    mouseX: i32,
-    mouseY: i32,
     tiltAngle: f32,
     twistAngle: f32,
     distance: f32,
-    bLeftMouseButtonDown: bool,
-    bRightMouseButtonDown: bool,
     lastTick: u128,
     pub strDatapath: String,
     strCal3D_Datapath: String,
-    bPaused: bool,
     averageCPUTime: f32,
     bOutputAverageCPUTimeAtExit: bool,
 
@@ -101,9 +104,10 @@ pub struct Demo {
     bFirst: bool,
     cumul: f64,
 
+    controls: RefCell<DemoControls>,
     theModels: Rc<RefCell<Models>>,
     theMenu: Rc<RefCell<Menu>>,
-    screen: graphics::Screen,
+    screen: RefCell<graphics::Screen>,
     camera: graphics::Camera,
     tr: graphics::TextRenderer,
     lr: graphics::LineRenderer,
@@ -123,7 +127,6 @@ fn loadTexture(filename: &str) -> Result<u32> {
 impl Demo {
     pub fn new() -> Result<Self> {
         Ok(Demo {
-            done: false,
             width: 640,
             height: 480,
             bFullscreen: false,
@@ -134,14 +137,9 @@ impl Demo {
             twistAngle: -45.0,
             distance: 270.0,
             strDatapath: String::from("data/"),
-            screen: graphics::Screen::new("foo", 800, 600)?,
-            mouseX: 0,
-            mouseY: 0,
-            bLeftMouseButtonDown: false,
-            bRightMouseButtonDown: false,
+            screen: RefCell::new(graphics::Screen::new("foo", 800, 600)?),
             lastTick: 0,
             strCal3D_Datapath: String::from(""),
-            bPaused: false,
             averageCPUTime: 0.0,
             bOutputAverageCPUTimeAtExit: false,
 
@@ -150,6 +148,14 @@ impl Demo {
             lastTime: 0.0,
             bFirst: true,
             cumul: 0.0,
+            controls: RefCell::new(DemoControls {
+                done: false,
+                mouseX: 0,
+                mouseY: 0,
+                bLeftMouseButtonDown: false,
+                bRightMouseButtonDown: false,
+                bPaused: false,
+            }),
             theModels: Rc::new(RefCell::new(Models::new())),
             theMenu: Rc::new(RefCell::new(Menu::new())),
             camera: graphics::Camera::new(),
@@ -247,43 +253,43 @@ Quit the demo by pressing 'q' or ESC
 
             self.onRender();
             self.onRenderInterface();
-            self.screen.swap();
+            self.screen.borrow_mut().swap();
 
-            if self.done {
+            if self.controls.borrow().done {
                 break;
             }
         }
     }
 
-    fn handle_events(&mut self) {
+    fn handle_events(&self) {
         use glfw::WindowEvent;
 
-        let messages = self.screen.messages();
+        let mut screen = self.screen.borrow_mut();
 
-        // let mut done = false;
+        let messages = screen.messages();
 
         for (_, event) in messages {
             // done = done || self.keys.glfw_handle_event(event);
             match event {
                 WindowEvent::Key(key, _, action, _) => {
                     println!("key: {event:?}");
-                    // self.key_event(key, action);
+                    self.key_event(key, action);
                 }
                 WindowEvent::MouseButton(button, action, _) => {
                     println!("mouse_button: {event:?}");
-                    // self.button_event(button, action);
+                    self.button_event(button, action);
                 }
                 WindowEvent::CursorPos(x, y) => {
                     println!("cursor_pos: {event:?}");
-                    // self.cursor_event(x, y);
+                    self.cursor_event(x, y);
                 }
                 WindowEvent::Size(width, height) => {
                     println!("size: {event:?}");
-                    // self.size_event(width, height);
+                    self.size_event(width, height);
                 }
                 WindowEvent::Close => {
                     println!("close: {event:?}");
-                    self.done = true;
+                    self.controls.borrow_mut().done = true;
                 }
                 _ => {
                     println!("other: {event:?}");
@@ -316,7 +322,7 @@ Quit the demo by pressing 'q' or ESC
         }
 
         // update the current model
-        if !self.bPaused {
+        if !self.controls.borrow().bPaused {
             self.theModels.borrow_mut().idle(elapsedSeconds);
             //for (int i = 0; i < 10; i++)
         }
@@ -342,16 +348,39 @@ Quit the demo by pressing 'q' or ESC
         //glutPostRedisplay()
     }
 
-    fn key_event(&mut self, key: Key, action: Action) {}
+    fn key_event(&self, key: Key, action: Action) {
+        match key {
+            glfw::Key::Escape => {
+                if action == glfw::Action::Release {
+                    self.controls.borrow_mut().done = true;
+                }
+            }
+            _ => {}
+        }
+    }
 
-    fn button_event(&mut self, button: glfw::MouseButton, action: Action) {}
+    fn button_event(&self, button: glfw::MouseButton, action: Action) {
+        match action {
+            glfw::Action::Press => {}
+            glfw::Action::Release => {}
+            _ => {}
+        }
+    }
 
-    fn cursor_event(&mut self, x: f64, y: f64) {}
+    fn cursor_event(&self, x: f64, y: f64) {
+        if !self.theMenu.borrow_mut().cursor_event(x, y) {
+            // unimplemented!();
 
-    fn size_event(&mut self, width: i32, height: i32) {}
+        }
+        let mut controls = self.controls.borrow_mut();
+        controls.mouseX = x as i32;
+        controls.mouseY = y as i32;
+    }
+
+    fn size_event(&self, width: i32, height: i32) {}
 
     fn onRender(&self) {
-        self.screen.world();
+        self.screen.borrow().world();
 
         let render_scale = self.theModels.borrow().render_scale();
 
@@ -387,7 +416,7 @@ Quit the demo by pressing 'q' or ESC
     }
 
     fn onRenderInterface(&self) {
-        self.screen.overlay();
+        self.screen.borrow().overlay();
 
         unsafe {
             gl::Disable(gl::DEPTH_TEST);
