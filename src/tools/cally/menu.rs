@@ -2,6 +2,7 @@ use cgmath::Matrix4;
 use cgmath::SquareMatrix;
 use cgmath::Vector3;
 use cgmath::{Deg, Rad};
+use glfw::{Action, Key};
 use std::cell::RefCell;
 use std::ops::Mul;
 use std::path::PathBuf;
@@ -248,7 +249,13 @@ impl Menu {
         }
     }
 
-    pub fn cursor_event(&mut self, x: f64, y: f64) -> bool {
+    pub fn key_event(&self, key: Key, action: Action) {}
+
+    pub fn button_event(&self, button: glfw::MouseButton, action: Action, x: i32, y: i32) -> bool {
+        false
+    }
+
+    pub fn cursor_event(&mut self, x: i32, y: i32) -> bool {
         false
     }
 

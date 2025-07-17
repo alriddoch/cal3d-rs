@@ -3,8 +3,7 @@ use cgmath::SquareMatrix;
 use cgmath::Vector3;
 use cgmath::{Deg, Rad};
 use clap::Parser;
-use glfw::Action;
-use glfw::Key;
+use glfw::{Action, Key};
 use std::cell::RefCell;
 use std::ops::Mul;
 use std::path::PathBuf;
@@ -79,6 +78,9 @@ pub struct DemoControls {
     bPaused: bool,
     bLeftMouseButtonDown: bool,
     bRightMouseButtonDown: bool,
+    tiltAngle: f32,
+    twistAngle: f32,
+    distance: f32,
 }
 
 // #[derive(Default)]
@@ -89,9 +91,6 @@ pub struct Demo {
     fpsDuration: f32,
     fpsFrames: i32,
     fps: i32,
-    tiltAngle: f32,
-    twistAngle: f32,
-    distance: f32,
     lastTick: u128,
     pub strDatapath: String,
     strCal3D_Datapath: String,
@@ -133,9 +132,6 @@ impl Demo {
             fpsDuration: 0.0,
             fpsFrames: 0,
             fps: 0,
-            tiltAngle: -70.0,
-            twistAngle: -45.0,
-            distance: 270.0,
             strDatapath: String::from("data/"),
             screen: RefCell::new(graphics::Screen::new("foo", 800, 600)?),
             lastTick: 0,
@@ -152,9 +148,13 @@ impl Demo {
                 done: false,
                 mouseX: 0,
                 mouseY: 0,
+                bPaused: false,
+
                 bLeftMouseButtonDown: false,
                 bRightMouseButtonDown: false,
-                bPaused: false,
+                tiltAngle: -70.0,
+                twistAngle: -45.0,
+                distance: 270.0,
             }),
             theModels: Rc::new(RefCell::new(Models::new())),
             theMenu: Rc::new(RefCell::new(Menu::new())),
@@ -355,24 +355,66 @@ Quit the demo by pressing 'q' or ESC
                     self.controls.borrow_mut().done = true;
                 }
             }
+            glfw::Key::Space => {
+                if action == glfw::Action::Release {
+                    let mut controls = self.controls.borrow_mut();
+                    controls.bPaused = !controls.bPaused;
+                }
+            }
             _ => {}
         }
+        self.theMenu.borrow_mut().key_event(key, action);
     }
 
     fn button_event(&self, button: glfw::MouseButton, action: Action) {
+        let mut controls = self.controls.borrow_mut();
         match action {
-            glfw::Action::Press => {}
+            glfw::Action::Press => {
+                if !self.theMenu.borrow_mut().button_event(
+                    button,
+                    action,
+                    controls.mouseX,
+                    controls.mouseY,
+                ) {
+                    match button {
+                        glfw::MouseButtonLeft => {
+                            controls.bLeftMouseButtonDown = true;
+                        }
+                        glfw::MouseButtonRight => {
+                            controls.bRightMouseButtonDown = true;
+                        }
+                        _ => {}
+                    }
+                }
+            }
             glfw::Action::Release => {}
             _ => {}
         }
     }
 
     fn cursor_event(&self, x: f64, y: f64) {
-        if !self.theMenu.borrow_mut().cursor_event(x, y) {
-            // unimplemented!();
-
-        }
         let mut controls = self.controls.borrow_mut();
+        let x = x as i32;
+        let y = y as i32;
+
+        if !self.theMenu.borrow_mut().cursor_event(x, y) {
+            // update twist/tilt angles
+            if controls.bLeftMouseButtonDown {
+                // calculate new angles
+                controls.twistAngle += (x - controls.mouseX) as f32;
+                controls.tiltAngle -= (y - controls.mouseY) as f32;
+            }
+
+            // update distance
+            if controls.bRightMouseButtonDown {
+                // calculate new distance
+                controls.distance -= (y - controls.mouseY) as f32 / 3.0;
+                if controls.distance < 0.0 {
+                    controls.distance = 0.0
+                }
+            }
+            // unimplemented!();
+        }
         controls.mouseX = x as i32;
         controls.mouseY = y as i32;
     }
@@ -388,7 +430,7 @@ Quit the demo by pressing 'q' or ESC
             .mul(Matrix4::from_translation(Vector3 {
                 x: 0.0,
                 y: 0.0,
-                z: -self.distance * render_scale,
+                z: -self.controls.borrow().distance * render_scale,
             }))
             .mul(Matrix4::from_axis_angle(
                 Vector3 {
@@ -396,7 +438,7 @@ Quit the demo by pressing 'q' or ESC
                     y: 0.0,
                     z: 0.0,
                 },
-                Rad::from(Deg(self.tiltAngle)),
+                Rad::from(Deg(self.controls.borrow().tiltAngle)),
             )) // view.Rotate(-65, 1, 0, 0)
             .mul(Matrix4::from_axis_angle(
                 Vector3 {
@@ -404,7 +446,7 @@ Quit the demo by pressing 'q' or ESC
                     y: 0.0,
                     z: 1.0,
                 },
-                Rad::from(Deg(self.twistAngle)),
+                Rad::from(Deg(self.controls.borrow().twistAngle)),
             ))
             .mul(Matrix4::from_translation(Vector3 {
                 x: 0.0,
@@ -427,5 +469,19 @@ Quit the demo by pressing 'q' or ESC
         // TODO: more stuff
 
         // unimplemented!();
+    }
+
+    fn setDimension(&self, width: u32, height: u32) {
+        unimplemented!();
+        // // store new width and height values
+        // self.width = width;
+        // self.height = height;
+
+        // self.screen.Window.SetSize(width, height);
+        // // set new viewport dimension
+        // //glViewport(0, 0, self.width, self.height)
+
+        // // adjust menu
+        // self.theMenu.onResize(width, height);
     }
 }
