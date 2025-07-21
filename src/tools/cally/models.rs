@@ -87,11 +87,19 @@ impl Models {
         self.vectorModel[self.currentModel].render(view)
     }
 
-    pub fn get_model_state(&self) -> u32 {
+    pub fn get_model_state(&self) -> usize {
         self.vectorModel[self.currentModel].state
     }
 
-    pub fn getMotionBlend(&self) -> &[f32;3] {
+    pub fn getMotionBlend(&self) -> &[f32; 3] {
         &self.vectorModel[self.currentModel].motionBlend
+    }
+
+    pub fn setMotionBlend(&mut self, blend: [f32; 3], delay: f32) {
+        self.vectorModel[self.currentModel].setMotionBlend(blend, delay);
+    }
+
+    pub fn setLodLevel(&mut self, level: f32) {
+        self.vectorModel[self.currentModel].lodLevel = level;
     }
 }

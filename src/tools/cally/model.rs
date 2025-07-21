@@ -1,13 +1,13 @@
 use cgmath::Matrix4;
 use std::path::PathBuf;
 
-const STATE_IDLE: u32 = 0;
-const STATE_FANCY: u32 = 1;
-const STATE_MOTION: u32 = 2;
+pub const STATE_IDLE: usize = 0;
+pub const STATE_FANCY: usize = 1;
+pub const STATE_MOTION: usize = 2;
 
 #[derive(Default)]
 pub struct Model {
-    pub(crate) state: u32,
+    pub(crate) state: usize,
     calCoreModel: cal3d::core::CalCoreModel,
     calModel: cal3d::CalModel,
     animationId: [i32; 16],
@@ -16,9 +16,9 @@ pub struct Model {
     meshCount: i32,
     textureId: [u32; 32],
     textureCount: i32,
-    pub(crate)motionBlend: [f32; 3],
+    pub(crate) motionBlend: [f32; 3],
     renderScale: f32,
-    lodLevel: f32,
+    pub lodLevel: f32,
     path: PathBuf,
 }
 
@@ -184,5 +184,41 @@ impl Model {
 
     pub fn render(&self, view: &Matrix4<f32>) {
         unimplemented!();
+    }
+
+    // 862
+    // ----------------------------------------------------------------------------//
+    // Set the motion blend factors state of the model                            //
+    // ----------------------------------------------------------------------------//
+    pub fn setMotionBlend(&mut self, pMotionBlend: [f32; 3], delay: f32) {
+        self.motionBlend[0] = pMotionBlend[0];
+        self.motionBlend[1] = pMotionBlend[1];
+        self.motionBlend[2] = pMotionBlend[2];
+
+        unimplemented!();
+
+        // self.calModel
+        //     .GetMixer()
+        //     .ClearCycle(self.animationId[STATE_IDLE], delay);
+        // self.calModel
+        //     .GetMixer()
+        //     .ClearCycle(self.animationId[STATE_FANCY], delay);
+        // self.calModel.GetMixer().BlendCycle(
+        //     self.animationId[STATE_MOTION],
+        //     self.motionBlend[0],
+        //     delay,
+        // );
+        // self.calModel.GetMixer().BlendCycle(
+        //     self.animationId[STATE_MOTION + 1],
+        //     self.motionBlend[1],
+        //     delay,
+        // );
+        // self.calModel.GetMixer().BlendCycle(
+        //     self.animationId[STATE_MOTION + 2],
+        //     self.motionBlend[2],
+        //     delay,
+        // );
+
+        self.state = STATE_MOTION
     }
 }

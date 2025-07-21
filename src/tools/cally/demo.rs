@@ -231,8 +231,8 @@ o----------------------------------------------------------------o"
             self.theModels.clone(),
             self.sr.clone(),
             self.strDatapath.as_str(),
-            self.width,
-            self.height,
+            self.width as i32,
+            self.height as i32,
         )?;
 
         // we're done
@@ -395,7 +395,7 @@ Quit the demo by pressing 'q' or ESC
     fn cursor_event(&self, x: f64, y: f64) {
         let mut controls = self.controls.borrow_mut();
         let x = x as i32;
-        let y = y as i32;
+        let y = self.height as i32 - y as i32;
 
         if !self.theMenu.borrow_mut().cursor_event(x, y) {
             // update twist/tilt angles

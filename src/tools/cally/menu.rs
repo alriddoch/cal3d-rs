@@ -13,13 +13,14 @@ use crate::graphics::{LineRenderer, WithOrtho};
 use crate::graphics::{Sprite, SpriteError};
 
 use super::graphics;
+use super::model::STATE_MOTION;
 use super::models::*;
 
 pub struct Menu {
     menuX: i32,
     menuY: i32,
-    lodX: u32,
-    lodY: u32,
+    lodX: i32,
+    lodY: i32,
     bMotionMovement: bool,
     bLodMovement: bool,
     bSkeleton: i32,
@@ -88,8 +89,8 @@ impl Menu {
         models: Rc<RefCell<Models>>,
         sprite_renderer: Rc<RefCell<graphics::SpriteRenderer>>,
         path: &str,
-        width: u32,
-        height: u32,
+        width: i32,
+        height: i32,
     ) -> Result<(), MenuError> {
         self.theModels = Some(models);
         self.sr = Some(sprite_renderer);
@@ -107,7 +108,7 @@ impl Menu {
         self.lod.WithSpriteFile(&strFilename).Setup()?;
         self.sr.as_ref().unwrap().borrow().bind(&self.lod);
 
-        self.lr.Setup(&WithOrtho(width, height))?;
+        self.lr.Setup(&WithOrtho(width as u32, height as u32))?;
 
         self.onResize(width, height);
         return Ok(());
@@ -256,6 +257,17 @@ impl Menu {
     }
 
     pub fn cursor_event(&mut self, x: i32, y: i32) -> bool {
+        if self.bMotionMovement {
+            self.calculateMotionBlend(x, y);
+
+            return true;
+        }
+
+        if self.bLodMovement {
+            self.calculateLodLevel(x, y);
+
+            return true;
+        }
         false
     }
 
@@ -263,11 +275,102 @@ impl Menu {
     // Handle window resize event                                                 //
     // ----------------------------------------------------------------------------//
     // 429
-    fn onResize(&mut self, width: u32, _height: u32) {
+    fn onResize(&mut self, width: i32, _height: i32) {
         // adjust menu position
         self.menuX = (width - 132) as i32;
 
         // adjust lod position
         self.lodX = width / 2 - 128;
+    }
+
+    fn calculateLodLevel(&mut self, x: i32, y: i32) {
+        // convert to local coordinates
+        let x = x - self.lodX;
+        let y = y - self.lodY;
+
+        // calculate the new lod level from the local coordinates
+        let mut lodLevel = (247 - x) as f32 / 200.0;
+
+        // clamp the value to [0.0, 1.0]
+        if lodLevel < 0.0 {
+            lodLevel = 0.0
+        }
+        if lodLevel > 1.0 {
+            lodLevel = 1.0
+        }
+
+        // set new motion blend factors
+        if self.theModels.is_some() {
+            match self.theModels.as_ref().unwrap().try_borrow_mut() {
+                Ok(mut models) => {
+                    models.setLodLevel(lodLevel);
+                }
+                Err(_) => {
+                    println!("Unable to borrow menu.theModels");
+                }
+            }
+        }
+    }
+
+    // ----------------------------------------------------------------------------//
+    // Calculate new motion blend factors for a given position                    //
+    // ----------------------------------------------------------------------------//
+    fn calculateMotionBlend(&mut self, x: i32, y: i32) {
+        // convert to local coordinates
+        let x = x - self.menuX;
+        let y = y - self.menuY;
+
+        // check if point is inside motion area
+        if (y >= MENUITEM_Y[STATE_MOTION])
+            && (y < MENUITEM_Y[STATE_MOTION] + MENUITEM_HEIGHT[STATE_MOTION])
+        {
+            // calculate baryzentric coordinates inside motion triangle
+            let mut motionBlend: [f32; 3] = [0.0, 0.0, 0.0];
+            motionBlend[0] = 1.0
+                - ((x - MENUITEM_MOTION_X[0]) as f32 + (MENUITEM_MOTION_Y[0] - y) as f32 / 1.732)
+                    / 76.0;
+
+            // clamp first to range [0.0 - 1.0]
+            if motionBlend[0] < 0.0 {
+                motionBlend[0] = 0.0
+            }
+            if motionBlend[0] > 1.0 {
+                motionBlend[0] = 1.0
+            }
+
+            motionBlend[1] = 1.0 - (y - MENUITEM_MOTION_Y[1]) as f32 / 66.0;
+
+            // clamp second to range [0.0 - 1.0]
+            if motionBlend[1] < 0.0 {
+                motionBlend[1] = 0.0
+            }
+            if motionBlend[1] > 1.0 {
+                motionBlend[1] = 1.0
+            }
+
+            // clamp sum of first and second to range [0.0 - 1.0]
+            if motionBlend[0] + motionBlend[1] > 1.0 {
+                let factor = motionBlend[0] + motionBlend[1];
+                motionBlend[0] /= factor;
+                motionBlend[1] /= factor;
+            }
+
+            motionBlend[2] = 1.0 - motionBlend[0] - motionBlend[1];
+
+            // clamp third to range [0.0 - 1.0]
+            if motionBlend[2] < 0.0 {
+                motionBlend[2] = 0.0
+            }
+
+            if self.theModels.is_some() {
+                match self.theModels.as_ref().unwrap().try_borrow_mut() {
+                    Ok(mut models) => models.setMotionBlend(motionBlend, 0.1),
+                    Err(_) => {
+                        println!("Unable to borrow menu.theModels");
+                    }
+                }
+                // set new motion blend factors
+            }
+        }
     }
 }
