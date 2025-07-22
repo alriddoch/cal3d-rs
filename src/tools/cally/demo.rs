@@ -370,9 +370,8 @@ Quit the demo by pressing 'q' or ESC
         let mut controls = self.controls.borrow_mut();
         match action {
             glfw::Action::Press => {
-                if !self.theMenu.borrow_mut().button_event(
+                if !self.theMenu.borrow_mut().button_down_event(
                     button,
-                    action,
                     controls.mouseX,
                     controls.mouseY,
                 ) {

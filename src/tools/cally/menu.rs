@@ -13,7 +13,7 @@ use crate::graphics::{LineRenderer, WithOrtho};
 use crate::graphics::{Sprite, SpriteError};
 
 use super::graphics;
-use super::model::STATE_MOTION;
+use super::model::{STATE_FANCY, STATE_IDLE, STATE_MOTION};
 use super::models::*;
 
 pub struct Menu {
@@ -82,6 +82,63 @@ impl Menu {
             menu: Sprite::new(),
             lod: Sprite::new(),
         }
+    }
+
+    // ----------------------------------------------------------------------------//
+    // Get the menu item at a given position                                      //
+    // ----------------------------------------------------------------------------//
+    fn getMenuItem(&self, x: i32, y: i32) -> usize {
+        // check if the point is inside the menu
+        if !self.isInside(x, y) {
+            return 999;
+        }
+
+        // check for the lod bar
+        if (x - self.lodX >= 0)
+            && (x - self.lodX < 256)
+            && (y - self.lodY >= 0)
+            && (y - self.lodY < 32)
+        {
+            return 9;
+        }
+
+        // check for each menu item
+        for item_id in 0..5 {
+            if (y - self.menuY >= MENUITEM_Y[item_id])
+                && (y - self.menuY < MENUITEM_Y[item_id] + MENUITEM_HEIGHT[item_id])
+            {
+                return item_id;
+            }
+        }
+
+        // test for flag menu items
+        if (y - self.menuY >= 0) && (y - self.menuY < 35) {
+            return (5 + (x - self.menuX) / 32) as usize;
+        }
+
+        return 999;
+    }
+
+    // ----------------------------------------------------------------------------//
+    // Check if point is inside the menu                                          //
+    // ----------------------------------------------------------------------------//
+    fn isInside(&self, x: i32, y: i32) -> bool {
+        if (x - self.menuX >= 0)
+            && (x - self.menuX < 128)
+            && (y - self.menuY >= 0)
+            && (y - self.menuY < 256)
+        {
+            return true;
+        }
+        if (x - self.lodX >= 0)
+            && (x - self.lodX < 256)
+            && (y - self.lodY >= 0)
+            && (y - self.lodY < 32)
+        {
+            return true;
+        }
+
+        return false;
     }
 
     pub fn onInit(
@@ -252,8 +309,77 @@ impl Menu {
 
     pub fn key_event(&self, key: Key, action: Action) {}
 
-    pub fn button_event(&self, button: glfw::MouseButton, action: Action, x: i32, y: i32) -> bool {
-        false
+    pub fn button_down_event(&mut self, button: glfw::MouseButton, x: i32, y: i32) -> bool {
+        // get activated menu item
+        let menuItem = self.getMenuItem(x, y);
+
+        if self.theModels.is_none() {
+            return false;
+        }
+
+        let mut models = self.theModels.as_ref().unwrap().borrow_mut();
+
+        // handle 'idle' button
+        if menuItem == STATE_IDLE {
+            models.setState(STATE_IDLE, 0.3);
+            return true;
+        }
+
+        // handle 'fancy' button
+        if menuItem == STATE_FANCY {
+            models.setState(STATE_FANCY, 0.3);
+            return true;
+        }
+
+        // handle 'motion' button/controller
+        if menuItem == STATE_MOTION {
+            models.setState(STATE_MOTION, 0.3);
+            self.calculateMotionBlend(x, y);
+            self.bMotionMovement = true;
+            return true;
+        }
+
+        // handle 'f/x 1' button
+        if menuItem == 3 {
+            models.executeAction(0);
+            self.actionTimespan[0] = 1.0;
+        }
+
+        // handle 'f/x 2' button
+        if menuItem == 4 {
+            models.executeAction(1);
+            self.actionTimespan[1] = 1.0;
+        }
+
+        // handle 'skeleton' button
+        if menuItem == 5 {
+            self.bSkeleton = (self.bSkeleton + 1) % 3;
+        }
+
+        // handle 'wireframe' button
+        if menuItem == 6 {
+            self.bWireframe = !self.bWireframe;
+        }
+
+        // handle 'light' button
+        if menuItem == 7 {
+            self.bLight = !self.bLight
+        }
+
+        // handle 'next model' button
+        if menuItem == 8 {
+            models.nextModel();
+            self.nextTimespan = 0.3
+        }
+
+        // handle lod bar
+        if menuItem == 9 {
+            self.calculateLodLevel(x, y);
+            self.bLodMovement = true;
+            return true;
+        }
+
+        return self.isInside(x, y);
     }
 
     pub fn cursor_event(&mut self, x: i32, y: i32) -> bool {

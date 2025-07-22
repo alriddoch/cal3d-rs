@@ -102,4 +102,16 @@ impl Models {
     pub fn setLodLevel(&mut self, level: f32) {
         self.vectorModel[self.currentModel].lodLevel = level;
     }
+
+    pub fn setState(&mut self, state: usize, delay: f32) {
+        self.vectorModel[self.currentModel].setState(state, delay);
+    }
+
+    pub fn executeAction(&self, action: i32) {
+        unimplemented!();
+    }
+
+    pub fn nextModel(&mut self) {
+        self.currentModel = (self.currentModel + 1) % self.vectorModel.len()
+    }
 }

@@ -170,12 +170,12 @@ impl Model {
     // Update the model                                                           //
     // ----------------------------------------------------------------------------//
     pub fn onUpdate(&mut self, elapsedSeconds: f32) {
-        // if s.calModel == nil {
+        // if self.calModel == nil {
         //     // fmt.Printf("No calmodel. Skipping update ...\n")
         //     return;
         // }
         // // update the model
-        // s.calModel.Update(elapsedSeconds)
+        // self.calModel.Update(elapsedSeconds)
     }
 
     pub fn getRenderScale(&self) -> f32 {
@@ -220,5 +220,69 @@ impl Model {
         // );
 
         self.state = STATE_MOTION
+    }
+
+    pub fn setState(&mut self, state: usize, delay: f32) {
+        // check if this is really a new state
+        // if state != self.state {
+        //     if state == STATE_IDLE {
+        //         self.calModel
+        //             .GetMixer()
+        //             .BlendCycle(self.animationId[STATE_IDLE], 1.0, delay);
+        //         self.calModel
+        //             .GetMixer()
+        //             .ClearCycle(self.animationId[STATE_FANCY], delay);
+        //         self.calModel
+        //             .GetMixer()
+        //             .ClearCycle(self.animationId[STATE_MOTION], delay);
+        //         self.calModel
+        //             .GetMixer()
+        //             .ClearCycle(self.animationId[STATE_MOTION + 1], delay);
+        //         self.calModel
+        //             .GetMixer()
+        //             .ClearCycle(self.animationId[STATE_MOTION + 2], delay);
+        //         self.state = STATE_IDLE
+        //     } else if state == STATE_FANCY {
+        //         self.calModel
+        //             .GetMixer()
+        //             .ClearCycle(self.animationId[STATE_IDLE], delay);
+        //         self.calModel
+        //             .GetMixer()
+        //             .BlendCycle(self.animationId[STATE_FANCY], 1.0, delay);
+        //         self.calModel
+        //             .GetMixer()
+        //             .ClearCycle(self.animationId[STATE_MOTION], delay);
+        //         self.calModel
+        //             .GetMixer()
+        //             .ClearCycle(self.animationId[STATE_MOTION + 1], delay);
+        //         self.calModel
+        //             .GetMixer()
+        //             .ClearCycle(self.animationId[STATE_MOTION + 2], delay);
+        //         self.state = STATE_FANCY
+        //     } else if state == STATE_MOTION {
+        //         self.calModel
+        //             .GetMixer()
+        //             .ClearCycle(self.animationId[STATE_IDLE], delay);
+        //         self.calModel
+        //             .GetMixer()
+        //             .ClearCycle(self.animationId[STATE_FANCY], delay);
+        //         self.calModel.GetMixer().BlendCycle(
+        //             self.animationId[STATE_MOTION],
+        //             self.motionBlend[0],
+        //             delay,
+        //         );
+        //         self.calModel.GetMixer().BlendCycle(
+        //             self.animationId[STATE_MOTION + 1],
+        //             self.motionBlend[1],
+        //             delay,
+        //         );
+        //         self.calModel.GetMixer().BlendCycle(
+        //             self.animationId[STATE_MOTION + 2],
+        //             self.motionBlend[2],
+        //             delay,
+        //         );
+        //         self.state = STATE_MOTION
+        //     }
+        // }
     }
 }
