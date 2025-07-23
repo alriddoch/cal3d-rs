@@ -195,7 +195,7 @@ impl Model {
         self.motionBlend[1] = pMotionBlend[1];
         self.motionBlend[2] = pMotionBlend[2];
 
-        unimplemented!();
+        // unimplemented!();
 
         // self.calModel
         //     .GetMixer()
@@ -284,5 +284,6 @@ impl Model {
         //         self.state = STATE_MOTION
         //     }
         // }
+        self.state = state;
     }
 }

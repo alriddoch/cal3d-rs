@@ -63,7 +63,7 @@ const MENUITEM_MOTION_Y: [i32; 3] = [168, 102, 168];
 
 impl Menu {
     pub fn new() -> Self {
-        Menu {
+        Self {
             bMotionMovement: false,
             menuX: 4,
             menuY: 4,
@@ -317,23 +317,23 @@ impl Menu {
             return false;
         }
 
-        let mut models = self.theModels.as_ref().unwrap().borrow_mut();
+        let models = self.theModels.as_ref().unwrap();
 
         // handle 'idle' button
         if menuItem == STATE_IDLE {
-            models.setState(STATE_IDLE, 0.3);
+            models.borrow_mut().setState(STATE_IDLE, 0.3);
             return true;
         }
 
         // handle 'fancy' button
         if menuItem == STATE_FANCY {
-            models.setState(STATE_FANCY, 0.3);
+            models.borrow_mut().setState(STATE_FANCY, 0.3);
             return true;
         }
 
         // handle 'motion' button/controller
         if menuItem == STATE_MOTION {
-            models.setState(STATE_MOTION, 0.3);
+            models.borrow_mut().setState(STATE_MOTION, 0.3);
             self.calculateMotionBlend(x, y);
             self.bMotionMovement = true;
             return true;
@@ -341,13 +341,13 @@ impl Menu {
 
         // handle 'f/x 1' button
         if menuItem == 3 {
-            models.executeAction(0);
+            models.borrow_mut().executeAction(0);
             self.actionTimespan[0] = 1.0;
         }
 
         // handle 'f/x 2' button
         if menuItem == 4 {
-            models.executeAction(1);
+            models.borrow_mut().executeAction(1);
             self.actionTimespan[1] = 1.0;
         }
 
@@ -368,7 +368,7 @@ impl Menu {
 
         // handle 'next model' button
         if menuItem == 8 {
-            models.nextModel();
+            models.borrow_mut().nextModel();
             self.nextTimespan = 0.3
         }
 
@@ -380,6 +380,20 @@ impl Menu {
         }
 
         return self.isInside(x, y);
+    }
+
+    pub fn button_up_event(&mut self, button: glfw::MouseButton, x: i32, y: i32) -> bool {
+        if self.bMotionMovement {
+            self.bMotionMovement = false;
+            return true;
+        }
+
+        if self.bLodMovement {
+            self.bLodMovement = false;
+            return true;
+        }
+
+        return false;
     }
 
     pub fn cursor_event(&mut self, x: i32, y: i32) -> bool {

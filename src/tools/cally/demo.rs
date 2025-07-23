@@ -123,17 +123,20 @@ fn loadTexture(filename: &str) -> Result<u32> {
     Ok(1)
 }
 
+const WINDOW_WIDTH: u32 = 640;
+const WINDOW_HEIGHT: u32 = 640;
+
 impl Demo {
     pub fn new() -> Result<Self> {
         Ok(Demo {
-            width: 640,
-            height: 480,
+            width: WINDOW_WIDTH,
+            height: WINDOW_HEIGHT,
             bFullscreen: false,
             fpsDuration: 0.0,
             fpsFrames: 0,
             fps: 0,
             strDatapath: String::from("data/"),
-            screen: RefCell::new(graphics::Screen::new("foo", 800, 600)?),
+            screen: RefCell::new(graphics::Screen::new("foo", WINDOW_WIDTH, WINDOW_HEIGHT)?),
             lastTick: 0,
             strCal3D_Datapath: String::from(""),
             averageCPUTime: 0.0,
@@ -386,7 +389,23 @@ Quit the demo by pressing 'q' or ESC
                     }
                 }
             }
-            glfw::Action::Release => {}
+            glfw::Action::Release => {
+                if !self.theMenu.borrow_mut().button_up_event(
+                    button,
+                    controls.mouseX,
+                    controls.mouseY,
+                ) {
+                    match button {
+                        glfw::MouseButtonLeft => {
+                            controls.bLeftMouseButtonDown = false;
+                        }
+                        glfw::MouseButtonRight => {
+                            controls.bRightMouseButtonDown = false;
+                        }
+                        _ => {}
+                    }
+                }
+            }
             _ => {}
         }
     }
@@ -414,6 +433,7 @@ Quit the demo by pressing 'q' or ESC
             }
             // unimplemented!();
         }
+        println!("pos: {x} {y}");
         controls.mouseX = x as i32;
         controls.mouseY = y as i32;
     }

@@ -108,7 +108,7 @@ impl Models {
     }
 
     pub fn executeAction(&self, action: i32) {
-        unimplemented!();
+        // unimplemented!();
     }
 
     pub fn nextModel(&mut self) {
