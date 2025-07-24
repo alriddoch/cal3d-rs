@@ -4,8 +4,8 @@ use cgmath::Matrix;
 use gl;
 
 use super::glslprogram::GLSLProgram;
-
 use super::{font, font::*};
+use crate::graphics::GraphicsError;
 
 pub struct TextRenderer {
     program: GLSLProgram,
@@ -33,7 +33,7 @@ impl TextRenderer {
         }
     }
 
-    pub fn setup(&mut self, screen_width: u32, screen_height: u32) -> Result<(), String> {
+    pub fn setup(&mut self, screen_width: u32, screen_height: u32) -> Result<(), GraphicsError> {
         let text_vertex_shader_source = include_str!("text.vert");
         let text_fragment_shader_source = include_str!("text.frag");
 
@@ -100,7 +100,7 @@ impl TextRenderer {
                 "LTexCoord\x00".as_bytes().as_ptr().cast(),
             );
             if tc == -1 {
-                return Err(String::from("Error LTexCorod"));
+                return Err(GraphicsError::OtherError(String::from("Error LTexCorod")));
             }
             self.texcoord_handle = tc as u32;
 
@@ -109,7 +109,7 @@ impl TextRenderer {
                 "MV\x00".as_bytes().as_ptr().cast(),
             );
             if self.modelview_handle == -1 {
-                return Err(String::from("Error MV"));
+                return Err(GraphicsError::OtherError(String::from("Error MV")));
             }
 
             self.character_handle = gl::GetUniformLocation(
@@ -117,7 +117,7 @@ impl TextRenderer {
                 "LCharacter\x00".as_bytes().as_ptr().cast(),
             );
             if self.character_handle == -1 {
-                return Err(String::from("Error LCharacter"));
+                return Err(GraphicsError::OtherError(String::from("Error LCharacter")));
             }
 
             // gl::BindFragDataLocation(br.program.ProgramID, 0, "outputColor\x00".as_bytes().as_ptr().cast());

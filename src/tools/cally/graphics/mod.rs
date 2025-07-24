@@ -19,6 +19,13 @@ pub use sprite::{Sprite, SpriteError};
 pub use spriterenderer::*;
 pub use textrenderer::*;
 
+#[derive(Debug)]
 pub enum GraphicsError {
     OtherError(String),
+}
+
+impl From<String> for GraphicsError {
+    fn from(error: String) -> Self {
+        GraphicsError::OtherError(error)
+    }
 }

@@ -1,5 +1,3 @@
-use std::ptr;
-
 use cgmath::Matrix;
 use gl;
 
@@ -7,8 +5,6 @@ use crate::graphics::RendererError;
 
 use super::glslprogram::GLSLProgram;
 use super::sprite::Sprite;
-
-use super::{font, font::*};
 
 pub struct SpriteRenderer {
     program: GLSLProgram,

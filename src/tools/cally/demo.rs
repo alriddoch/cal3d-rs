@@ -14,15 +14,24 @@ use super::menu::*;
 use super::model::*;
 use super::models::*;
 use super::tick::*;
+use crate::graphics::GraphicsError;
 use crate::graphics::{Sprite, SpriteError};
 
 #[derive(Debug)]
 pub enum DemoError {
+    GraphicsError(graphics::GraphicsError),
     MenuError(MenuError),
     ModelError(ModelError),
+    RendererError(graphics::RendererError),
     SpriteError(SpriteError),
     PathError,
     OtherError(String),
+}
+
+impl From<graphics::RendererError> for DemoError {
+    fn from(error: graphics::RendererError) -> Self {
+        DemoError::RendererError(error)
+    }
 }
 
 impl From<MenuError> for DemoError {
@@ -199,10 +208,13 @@ o----------------------------------------------------------------o"
         self.camera
             .setup((self.width as f32) / (self.height as f32), 2000.0);
 
-        self.tr.setup(self.width, self.height);
+        self.tr.setup(self.width, self.height)?;
         // self.cr.Setup(self.camera);
         self.lr.Setup(graphics::WithCamera(&self.camera));
-        self.sr.as_ref().borrow_mut().setup(self.width, self.height);
+        self.sr
+            .as_ref()
+            .borrow_mut()
+            .setup(self.width, self.height)?;
 
         // load the cursor texture
         let strFilename = [self.strDatapath.as_str(), "cursor.raw"]
