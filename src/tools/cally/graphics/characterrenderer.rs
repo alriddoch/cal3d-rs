@@ -1,5 +1,7 @@
 use cal3d::CalIndex;
 use cgmath::Matrix;
+use cgmath::Matrix4;
+use cgmath::SquareMatrix;
 use gl;
 use std::os::raw::c_void;
 
@@ -176,5 +178,104 @@ impl CharacterRenderer {
         lightingSetup(&self.program);
 
         Ok(())
+    }
+
+    fn SetState(&self, view: &Matrix4<f32>) -> Result<(), RendererError> {
+        unsafe {
+            gl::UseProgram(self.program.id());
+            gl::BindVertexArray(self.vao);
+
+            gl::UniformMatrix4fv(self.program.view_handle, 1, gl::FALSE, view.as_ptr());
+        }
+
+        return Ok(());
+    }
+
+    fn ResetState() {
+        unsafe { gl::BindVertexArray(gl::ZERO) }
+    }
+
+    fn setMaterials(&self, ambient: [f32; 4], diffuse: [f32; 4], specular: [f32; 4], shine: f32) {
+        unsafe {
+            gl::Uniform4fv(self.AmbientHandle, 1, &ambient[0]);
+            gl::Uniform4fv(self.DiffuseHandle, 1, &diffuse[0]);
+            gl::Uniform4fv(self.SpecularHandle, 1, &specular[0]);
+            gl::Uniform1f(self.ShininessHandle, shine);
+        }
+    }
+
+    fn mapArrayBuffer(&self) -> Result<*mut c_void, RendererError> {
+        unsafe {
+            gl::BindBuffer(gl::ARRAY_BUFFER, self.vbo[0]);
+            let u = gl::MapBuffer(gl::ARRAY_BUFFER, gl::READ_WRITE);
+            if u == std::ptr::null_mut() {
+                return Err(RendererError::OtherError(String::from(
+                    "error mapping array buffer",
+                )));
+            }
+            Ok(u)
+        }
+    }
+
+    fn unmapArrayBuffer(&self) {
+        unsafe {
+            gl::UnmapBuffer(gl::ARRAY_BUFFER);
+        }
+    }
+
+    fn mapElementBuffer(&self) -> Result<*mut c_void, RendererError> {
+        unsafe {
+            gl::BindBuffer(gl::ELEMENT_ARRAY_BUFFER, self.vbo[1]);
+            let u = gl::MapBuffer(gl::ELEMENT_ARRAY_BUFFER, gl::READ_WRITE);
+            if u == std::ptr::null_mut() {
+                return Err(RendererError::OtherError(String::from(
+                    "error mapping element buffer",
+                )));
+            }
+            Ok(u)
+        }
+    }
+
+    fn unmapElementBuffer(&self) {
+        unsafe {
+            gl::UnmapBuffer(gl::ELEMENT_ARRAY_BUFFER);
+        }
+    }
+
+    fn Draw(&self, faces: i32, texture: u32) {
+        unsafe {
+            gl::ActiveTexture(gl::TEXTURE0);
+            gl::BindTexture(gl::TEXTURE_2D, texture);
+
+            // gl::DrawElements(GL_TRIANGLES, faceCount*3, GL_UNSIGNED_INT, &meshFaces[0][0])
+            let model = Matrix4::<f32>::identity();
+            gl::UniformMatrix4fv(self.program.model_handle, 1, gl::FALSE, model.as_ptr());
+            gl::DrawElements(gl::TRIANGLES, faces * 3, gl::UNSIGNED_INT, std::ptr::null());
+        }
+    }
+}
+
+fn lightingSetup(program: &WorldGLSLProgram) {
+    unsafe {
+        let ambientColor: [f32; 3] = [0.9, 0.9, 1.0];
+        gl::Uniform3fv(program.ambient_color_handle, 1, &ambientColor[0]);
+
+        gl::Uniform1f(program.ambient_power_handle, 0.35);
+
+        let sun: [f32; 3] = [0., 0., 1.];
+        gl::Uniform3fv(program.sun_handle, 1, &sun[0]);
+
+        let sunColor: [f32; 3] = [1.0, 0.998, 0.975];
+        gl::Uniform3fv(program.sun_color_handle, 1, &sunColor[0]);
+
+        gl::Uniform1f(program.sun_power_handle, 0.7);
+
+        let light: [f32; 3] = [80., 80., 80.];
+        gl::Uniform3fv(program.light_handle, 1, &light[0]);
+
+        let lightColor: [f32; 3] = [1.0, 0.0, 0.5];
+        gl::Uniform3fv(program.light_color_handle, 1, &lightColor[0]);
+
+        gl::Uniform1f(program.light_power_handle, 500.0);
     }
 }
