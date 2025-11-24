@@ -15,4 +15,8 @@ impl CalCoreMesh {
             m_name: String::from(""),
         }
     }
+
+    pub fn getCoreSubmeshes(&self) -> &Vec<Rc<RefCell<CalCoreSubmesh>>> {
+        &self.m_vectorCoreSubmesh
+    }
 }

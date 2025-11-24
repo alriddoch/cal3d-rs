@@ -164,6 +164,18 @@ impl CalCoreSubmesh {
         self.m_hasNonWhiteVertexColors = true;
     }
 
+    // 136 cpp
+    /*****************************************************************************/
+    /** Returns the number of springs.
+     *
+     * This function returns the number of springs in the core submesh instance.
+     *
+     * @return The number of springs.
+     *****************************************************************************/
+    pub fn getSpringCount(&self) -> usize {
+        return self.m_vectorSpring.len();
+    }
+
     //165
     /*****************************************************************************/
     /** UpdateTangentVector
@@ -233,7 +245,8 @@ impl CalCoreSubmesh {
         self.m_vectorvectorTangentSpace[mapId].resize(new_len, TangentSpace::default());
 
         for tangentId in 0..self.m_vectorvectorTangentSpace[mapId].len() {
-            self.m_vectorvectorTangentSpace[mapId][tangentId].tangent = CalVector::new(0.0, 0.0, 0.0);
+            self.m_vectorvectorTangentSpace[mapId][tangentId].tangent =
+                CalVector::new(0.0, 0.0, 0.0);
             self.m_vectorvectorTangentSpace[mapId][tangentId].crossFactor = 1.0;
         }
 
@@ -394,7 +407,10 @@ impl CalCoreSubmesh {
      *         \li \b -1 if an error happened
      *****************************************************************************/
 
-    pub fn addCoreSubMorphTarget(&mut self, mut pCoreSubMorphTarget: CalCoreSubMorphTarget) -> usize {
+    pub fn addCoreSubMorphTarget(
+        &mut self,
+        mut pCoreSubMorphTarget: CalCoreSubMorphTarget,
+    ) -> usize {
         // get next sub morph target id
 
         let subMorphTargetId = self.m_vectorCoreSubMorphTarget.len();

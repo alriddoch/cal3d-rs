@@ -1,5 +1,8 @@
+use super::graphics::get_texture;
+use cal3d::CalModel;
 use cgmath::Matrix4;
 use std::path::PathBuf;
+use std::{cell::RefCell, rc::Rc};
 
 pub const STATE_IDLE: usize = 0;
 pub const STATE_FANCY: usize = 1;
@@ -8,8 +11,8 @@ pub const STATE_MOTION: usize = 2;
 #[derive(Default)]
 pub struct Model {
     pub(crate) state: usize,
-    calCoreModel: cal3d::core::CalCoreModel,
-    calModel: cal3d::CalModel,
+    calCoreModel: Rc<RefCell<cal3d::core::CalCoreModel>>,
+    calModel: Option<CalModel>,
     animationId: [i32; 16],
     animationCount: i32,
     meshId: [i32; 32],
@@ -126,24 +129,26 @@ impl Model {
                 "skeleton" => {
                     let mut filename = strPath.clone();
                     filename.push(value);
-                    self.calCoreModel.loadCoreSkeleton(&filename)?;
+                    self.calCoreModel.borrow_mut().loadCoreSkeleton(&filename)?;
                 }
                 "animation" => {
                     let mut filename = strPath.clone();
                     filename.push(value);
-                    self.animationId[animationCount] =
-                        self.calCoreModel.loadCoreAnimation(&filename)?;
+                    self.animationId[animationCount] = self
+                        .calCoreModel
+                        .borrow_mut()
+                        .loadCoreAnimation(&filename)?;
                     animationCount += 1;
                 }
                 "mesh" => {
                     let mut filename = strPath.clone();
                     filename.push(value);
-                    self.calCoreModel.loadCoreMesh(&filename)?;
+                    self.calCoreModel.borrow_mut().loadCoreMesh(&filename)?;
                 }
                 "material" => {
                     let mut filename = strPath.clone();
                     filename.push(value);
-                    self.calCoreModel.loadCoreMaterial(&filename)?;
+                    self.calCoreModel.borrow_mut().loadCoreMaterial(&filename)?;
                 }
                 _ => {
                     println!("{name}({line}): Invalid syntax.");
@@ -161,7 +166,81 @@ impl Model {
         let mut buff_reader = BufReader::new(fs::File::open(filename)?);
         self.readFile(filename, &mut buff_reader)?;
 
-        // FIXME: Postprocessing, textures, etc.
+        let strPath = self.path.clone();
+
+        let mut core_model = self.calCoreModel.borrow_mut();
+        let core_materials = core_model.getCoreMaterialsMut();
+        // load all textures and store the opengl texture id in the corresponding map in the material
+        //   int materialId;
+
+        // get the core material
+
+        for pCoreMaterial in core_materials.iter_mut() {
+            let material_maps = pCoreMaterial.getMapsMut();
+            // loop through all maps of the core material
+
+            for map in material_maps.iter_mut() {
+                // get the filename of the texture
+
+                let mut filename = strPath.clone();
+                filename.push(&map.strFilename);
+
+                // load the texture from the file
+                let textureId = get_texture(&filename, false, 1)?;
+
+                // store the opengl texture id in the user data of the map
+                map.userData = textureId as i32;
+            }
+        }
+
+        // make one material thread for each material
+        // NOTE: this is not the right way to do it, but this viewer can't do the right
+        // mapping without further information on the model etc.
+        for materialId in 0..core_materials.len() as i32 {
+            // create the a material thread
+            core_model.createCoreMaterialThread(materialId);
+
+            // initialize the material thread
+            core_model.setCoreMaterialId(materialId, 0, materialId);
+        }
+
+        // Calculate Bounding Boxes
+
+        self.calCoreModel
+            .borrow()
+            .getCoreSkeleton()
+            .borrow()
+            .calculateBoundingBoxes(&self.calCoreModel);
+
+        let cal_model = CalModel::new(self.calCoreModel.clone());
+
+        // attach all meshes to the model
+
+        for meshId in 0..self.calCoreModel.borrow().getCoreMeshes().len() as u32 {
+            cal_model.attachMesh(meshId);
+        }
+
+        // set the material set of the whole model
+        cal_model.setMaterialSet(0);
+
+        // set initial animation state
+        self.state = STATE_MOTION;
+        cal_model
+            .getMixer()
+            .blendCycle(self.animationId[STATE_MOTION], self.motionBlend[0], 0.0);
+        cal_model.getMixer().blendCycle(
+            self.animationId[STATE_MOTION + 1],
+            self.motionBlend[1],
+            0.0,
+        );
+        cal_model.getMixer().blendCycle(
+            self.animationId[STATE_MOTION + 2],
+            self.motionBlend[2],
+            0.0,
+        );
+
+        self.calModel = Some(cal_model);
+
         Ok(())
     }
 
@@ -183,7 +262,7 @@ impl Model {
     }
 
     pub fn render(&self, view: &Matrix4<f32>) {
-        unimplemented!();
+        todo!("Unable to render yet");
     }
 
     // 862

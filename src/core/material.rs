@@ -1,5 +1,5 @@
 #[derive(Debug)]
-pub(super) struct Color {
+pub struct Color {
     red: u8,
     green: u8,
     blue: u8,
@@ -18,10 +18,10 @@ impl Color {
 }
 
 #[derive(Debug)]
-pub(super) struct Map {
-    strFilename: String,
-    mapType: String,
-    userData: i32,
+pub struct Map {
+    pub strFilename: String,
+    pub mapType: String,
+    pub userData: i32,
 }
 
 impl Map {
@@ -61,5 +61,13 @@ impl CalCoreMaterial {
             m_shininess,
             m_vectorMap,
         }
+    }
+
+    pub fn getMaps(&self) -> &Vec<Map> {
+        &self.m_vectorMap
+    }
+
+    pub fn getMapsMut(&mut self) -> &mut Vec<Map> {
+        &mut self.m_vectorMap
     }
 }

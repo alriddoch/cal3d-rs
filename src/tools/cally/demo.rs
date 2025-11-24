@@ -1,3 +1,9 @@
+use super::graphics;
+use super::menu::*;
+use super::model::*;
+use super::models::*;
+use super::tick::*;
+use crate::graphics::{Sprite, SpriteError};
 use cgmath::Matrix4;
 use cgmath::SquareMatrix;
 use cgmath::Vector3;
@@ -8,14 +14,6 @@ use std::cell::RefCell;
 use std::ops::Mul;
 use std::path::PathBuf;
 use std::rc::Rc;
-
-use super::graphics;
-use super::menu::*;
-use super::model::*;
-use super::models::*;
-use super::tick::*;
-use crate::graphics::GraphicsError;
-use crate::graphics::{Sprite, SpriteError};
 
 #[derive(Debug)]
 pub enum DemoError {
@@ -210,7 +208,7 @@ o----------------------------------------------------------------o"
 
         self.tr.setup(self.width, self.height)?;
         // self.cr.Setup(self.camera);
-        self.lr.Setup(graphics::WithCamera(&self.camera));
+        self.lr.Setup(graphics::WithCamera(&self.camera))?;
         self.sr
             .as_ref()
             .borrow_mut()

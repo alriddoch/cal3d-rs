@@ -1,8 +1,7 @@
+use super::GraphicsError;
 use gl;
 use glfw::Context;
 use glfw::{self};
-
-use super::GraphicsError;
 
 pub struct Screen {
     pub glfw: glfw::Glfw,

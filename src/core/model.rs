@@ -1,4 +1,5 @@
 use std::cell::RefCell;
+use std::collections::BTreeMap;
 use std::path::PathBuf;
 use std::rc::Rc;
 
@@ -22,7 +23,7 @@ pub struct CalCoreModel {
     m_vectorCoreMesh: Vec<Rc<RefCell<CalCoreMesh>>>,
     // std::vector<CalCoreMeshPtr>           m_vectorMorphMesh;
     m_vectorCoreMaterial: Vec<CalCoreMaterial>,
-    // std::map<int, std::map<int, int> >    m_mapmapCoreMaterialThread;
+    m_mapmapCoreMaterialThread: BTreeMap<i32, BTreeMap<i32, i32>>,
     // Cal::UserData                         m_userData;
     // std::map<std::string, int>            m_animationName;
     // std::map<std::string, int>            m_animatedMorphName;
@@ -32,6 +33,22 @@ pub struct CalCoreModel {
 }
 
 impl CalCoreModel {
+    pub fn getCoreSkeleton(&self) -> &Rc<RefCell<CalCoreSkeleton>> {
+        &self.pCoreSkeleton
+    }
+
+    pub fn getCoreMaterials(&self) -> &Vec<CalCoreMaterial> {
+        &self.m_vectorCoreMaterial
+    }
+
+    pub fn getCoreMaterialsMut(&mut self) -> &mut Vec<CalCoreMaterial> {
+        &mut self.m_vectorCoreMaterial
+    }
+
+    pub fn getCoreMeshes(&self) -> &Vec<Rc<RefCell<CalCoreMesh>>> {
+        &self.m_vectorCoreMesh
+    }
+
     //112
     /*****************************************************************************/
     /** Adds a core animation.
@@ -109,6 +126,28 @@ impl CalCoreModel {
 
         self.m_vectorCoreMesh.push(pCoreMesh);
         return num;
+    }
+
+    // 372 cpp
+    /*****************************************************************************/
+    /** Creates a core material thread.
+     *
+     * This function creates a new core material thread with the given ID.
+     *
+     * @param coreMaterialThreadId The ID of the core material thread that should
+     *                             be created.
+     *
+     * @return One of the following values:
+     *         \li \b true if successful
+     *         \li \b false if an error happened
+     *****************************************************************************/
+    pub fn createCoreMaterialThread(&mut self, coreMaterialThreadId: i32) -> bool {
+        // insert an empty core material thread with a given id
+        let mapCoreMaterialThreadId = BTreeMap::<i32, i32>::default();
+        self.m_mapmapCoreMaterialThread
+            .insert(coreMaterialThreadId, mapCoreMaterialThreadId);
+
+        return true;
     }
 
     //659
@@ -206,5 +245,44 @@ impl CalCoreModel {
     pub fn loadCoreSkeleton(&mut self, filename: &PathBuf) -> Result<(), loader::LoaderError> {
         loader::loadCoreSkeleton(filename, &self.pCoreSkeleton)?;
         Ok(())
+    }
+
+    // 1591 cpp
+    /*****************************************************************************/
+    /** Sets a core material ID.
+     *
+     * This function sets a core material ID for a core material thread / core
+     * material set pair.
+     *
+     * @param coreMaterialThreadId The ID of the core material thread.
+     * @param coreMaterialSetId The ID of the core maetrial set.
+     * @param coreMaterialId The ID of the core maetrial.
+     *
+     * @return One of the following values:
+     *         \li \b true if successful
+     *         \li \b false if an error happened
+     *****************************************************************************/
+    pub fn setCoreMaterialId(
+        &mut self,
+        coreMaterialThreadId: i32,
+        coreMaterialSetId: i32,
+        coreMaterialId: i32,
+    ) -> bool {
+        // find the core material thread
+        let Some(coreMaterialThread) = self
+            .m_mapmapCoreMaterialThread
+            .get_mut(&coreMaterialThreadId)
+        else {
+            // CalError::setLastError(CalError::INVALID_HANDLE, __FILE__, __LINE__);
+            return false;
+        };
+
+        // remove a possible entry in the core material thread
+        coreMaterialThread.remove(&coreMaterialSetId);
+
+        // set the given set id in the core material thread to the given core material id
+        coreMaterialThread.insert(coreMaterialSetId, coreMaterialId);
+
+        return true;
     }
 }

@@ -1,8 +1,7 @@
-use cgmath::Matrix4;
-use std::path::PathBuf;
-
 use super::demo::DemoError;
 use super::model::*;
+use cgmath::Matrix4;
+use std::path::PathBuf;
 
 pub(crate) struct Models {
     vectorModel: Vec<Model>,

@@ -1,10 +1,9 @@
+use super::skeleton::CalCoreSkeleton;
+use crate::vector::bounding::BoundingBox;
+use crate::{CalQuaternion, CalVector};
 use std::cell::RefCell;
 use std::rc::Rc;
 use std::{default, ops::Mul};
-
-use crate::{CalQuaternion, CalVector};
-
-use super::skeleton::CalCoreSkeleton;
 
 pub enum CalLightType {
     LIGHT_TYPE_NONE,
@@ -26,10 +25,9 @@ pub struct CalCoreBone {
     m_translationBoneSpace: CalVector<f32>,
     m_rotationBoneSpace: CalQuaternion<f32>,
     // Cal::UserData    m_userData;
-
-    // CalBoundingBox   m_boundingBox;
-    // CalVector        m_boundingPosition[6];
-    // bool             m_boundingBoxPrecomputed;
+    m_boundingBox: BoundingBox,
+    m_boundingPosition: [CalVector<f32>; 6],
+    m_boundingBoxPrecomputed: bool,
 }
 
 impl CalCoreBone {
@@ -54,6 +52,9 @@ impl CalCoreBone {
             m_rotationAbsolute: CalQuaternion::<f32>::new(1.0, 0.0, 0.0, 0.0),
             m_translationBoneSpace,
             m_rotationBoneSpace,
+            m_boundingBox: BoundingBox::default(),
+            m_boundingPosition: [CalVector::<f32>::new(0.0, 0.0, 0.0); 6],
+            m_boundingBoxPrecomputed: false,
         }
     }
 
@@ -85,6 +86,14 @@ impl CalCoreBone {
         &self.m_translationAbsolute
     }
 
+    pub fn isBoundingBoxPrecomputed(&self) -> bool {
+        self.m_boundingBoxPrecomputed
+    }
+
+    pub fn setBoundingBoxPrecomputed(&mut self, inComputed: bool) {
+        self.m_boundingBoxPrecomputed = inComputed;
+    }
+
     //65
     /*****************************************************************************/
     /** Calculates the current state.
@@ -109,14 +118,11 @@ impl CalCoreBone {
                 // self.m_translationAbsolute += pParent.getTranslationAbsolute();
                 let parent = pParent.as_ref().unwrap().borrow();
 
-                self.m_translationAbsolute = parent
-                    .getRotationAbsolute()
-                    .mul(self.m_translation);
+                self.m_translationAbsolute = parent.getRotationAbsolute().mul(self.m_translation);
                 self.m_translationAbsolute =
                     self.m_translationAbsolute + parent.getTranslationAbsolute();
 
-                self.m_rotationAbsolute =
-                    self.m_rotation.mul(parent.getRotationAbsolute());
+                self.m_rotationAbsolute = self.m_rotation.mul(parent.getRotationAbsolute());
             } else {
                 eprintln!(
                     "Invalid parent bone Id {} in calculateState",
@@ -138,5 +144,60 @@ impl CalCoreBone {
                 );
             }
         }
+    }
+
+    // 160 cpp
+    pub fn initBoundingBox(&mut self) {
+        use cgmath::Rotation;
+        let rot = self.m_rotationBoneSpace.clone();
+
+        rot.invert();
+
+        let dir = CalVector::<f32>::new(1.0, 0.0, 0.0);
+        let dir = rot.mul(dir);
+        self.m_boundingBox.plane[0].setNormal(&dir);
+
+        let dir = CalVector::<f32>::new(-1.0, 0.0, 0.0);
+        let dir = rot.mul(dir);
+        self.m_boundingBox.plane[1].setNormal(&dir);
+
+        let dir = CalVector::<f32>::new(0.0, 1.0, 0.0);
+        let dir = rot.mul(dir);
+        self.m_boundingBox.plane[2].setNormal(&dir);
+
+        let dir = CalVector::<f32>::new(0.0, -1.0, 0.0);
+        let dir = rot.mul(dir);
+        self.m_boundingBox.plane[3].setNormal(&dir);
+
+        let dir = CalVector::<f32>::new(0.0, 0.0, 1.0);
+        let dir = rot.mul(dir);
+        self.m_boundingBox.plane[4].setNormal(&dir);
+
+        let dir = CalVector::<f32>::new(0.0, 0.0, -1.0);
+        let dir = rot.mul(dir);
+        self.m_boundingBox.plane[5].setNormal(&dir);
+    }
+
+    /*****************************************************************************/
+    /** Updates the bounding box to include the given position.
+     *
+     * This function Updates the bounding box of the core bone instance to include
+     * a given position.
+     *
+     * @param position The position to be included in the bounding box
+     * @return True if the bounding box was changed by this call, false otherwise
+     *****************************************************************************/
+    pub fn updateBoundingBox(&mut self, position: &CalVector<f32>) -> bool {
+        let mut bBoundsComputed = false;
+
+        for planeId in 0..6 {
+            if self.m_boundingBox.plane[planeId].Eval(position) < 0.0 {
+                self.m_boundingBox.plane[planeId].SetPosition(position);
+                self.m_boundingPosition[planeId] = position.clone();
+                bBoundsComputed = true;
+            }
+        }
+
+        return bBoundsComputed;
     }
 }

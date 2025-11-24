@@ -1,20 +1,17 @@
+use super::graphics;
+use super::model::{STATE_FANCY, STATE_IDLE, STATE_MOTION};
+use super::models::*;
+use crate::graphics::RendererError;
+use crate::graphics::{LineRenderer, WithOrtho};
+use crate::graphics::{Sprite, SpriteError};
 use cgmath::Matrix4;
 use cgmath::SquareMatrix;
 use cgmath::Vector3;
-use cgmath::{Deg, Rad};
 use glfw::{Action, Key};
 use std::cell::RefCell;
 use std::ops::Mul;
 use std::path::PathBuf;
 use std::rc::Rc;
-
-use crate::graphics::RendererError;
-use crate::graphics::{LineRenderer, WithOrtho};
-use crate::graphics::{Sprite, SpriteError};
-
-use super::graphics;
-use super::model::{STATE_FANCY, STATE_IDLE, STATE_MOTION};
-use super::models::*;
 
 pub struct Menu {
     menuX: i32,
