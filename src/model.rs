@@ -11,7 +11,7 @@ pub enum ModelError {
 pub struct CalModel {
     m_pCoreModel: Rc<RefCell<super::core::CalCoreModel>>,
     // CalSkeleton           *m_pSkeleton;
-    // CalAbstractMixer      *m_pMixer;
+    // m_pMixer: CalAbstractMixer,
     // CalMorphTargetMixer   *m_pMorphTargetMixer;
     // CalPhysique           *m_pPhysique;
     // CalSpringSystem       *m_pSpringSystem;
@@ -74,8 +74,13 @@ impl CalModel {
         Ok(())
     }
 
-    pub fn setMaterialSet(&self, setId: i32) {
-        todo!("model.cpp line 669");
+    pub fn setMaterialSet(&mut self, setId: i32) {
+        // set the lod level in all meshes
+
+        for iteratorMesh in self.m_vectorMesh.iter_mut() {
+            // set the material set in the mesh
+            iteratorMesh.setMaterialSet(setId, &self.m_pCoreModel.borrow());
+        }
     }
 
     pub fn getMixer(&self) -> CalMixer {

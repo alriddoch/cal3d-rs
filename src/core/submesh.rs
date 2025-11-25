@@ -164,6 +164,20 @@ impl CalCoreSubmesh {
         self.m_hasNonWhiteVertexColors = true;
     }
 
+    // 96 cpp
+    /*****************************************************************************/
+    /** Returns the ID of the core material thread.
+     *
+     * This function returns the ID of the core material thread of this core
+     * submesh instance.
+     *
+     * @return The ID of the core material thread.
+     *****************************************************************************/
+
+    pub fn getCoreMaterialThreadId(&self) -> i32 {
+        self.m_coreMaterialThreadId
+    }
+
     // 136 cpp
     /*****************************************************************************/
     /** Returns the number of springs.

@@ -15,6 +15,16 @@ pub struct CalSubmesh {
     // std::vector<float>                      m_vectorSubMorphTargetGroupAttenuation;
     // int                                     m_vertexCount;
     // int                                     m_faceCount;
-    // int                                     m_coreMaterialId;
+    m_coreMaterialId: i32,
     // bool                                    m_bInternalData;
+}
+
+impl CalSubmesh {
+    pub fn getCoreSubmesh(&self) -> &CalCoreSubmesh {
+        &self.m_pCoreSubmesh
+    }
+
+    pub fn setCoreMaterialId(&mut self, coreMaterialId: i32) {
+        self.m_coreMaterialId = coreMaterialId;
+    }
 }

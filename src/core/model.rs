@@ -165,6 +165,36 @@ impl CalCoreModel {
         self.m_vectorCoreMesh.get(coreMeshId)
     }
 
+    /*****************************************************************************/
+    /** Returns a specified core material ID.
+     *
+     * This function returns the core material ID for a specified core material
+     * thread / core material set pair.
+     *
+     * @param coreMaterialThreadId The ID of the core material thread.
+     * @param coreMaterialSetId The ID of the core material set.
+     *
+     * @return One of the following values:
+     *         \li the \b ID of the core material
+     *         \li \b -1 if an error happened
+     *****************************************************************************/
+
+    pub fn getCoreMaterialId(
+        &self,
+        coreMaterialThreadId: i32,
+        coreMaterialSetId: i32,
+    ) -> Option<i32> {
+        // get the core material thread
+        let Some(coreMaterialThread) = self.m_mapmapCoreMaterialThread.get(&coreMaterialThreadId)
+        else {
+            // CalError::setLastError(CalError::INVALID_HANDLE, __FILE__, __LINE__);
+            return None;
+        };
+
+        // find the material id for the given set
+        coreMaterialThread.get(&coreMaterialSetId).copied()
+    }
+
     // 635 cpp
     /*****************************************************************************/
     /** Returns the number of core meshes.
