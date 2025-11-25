@@ -1,5 +1,11 @@
+use super::CalMesh;
 use super::CalMixer;
 use std::{cell::RefCell, rc::Rc};
+
+#[derive(Debug)]
+pub enum ModelError {
+    IndexError((usize, usize)),
+}
 
 #[derive(Default)]
 pub struct CalModel {
@@ -11,7 +17,8 @@ pub struct CalModel {
     // CalSpringSystem       *m_pSpringSystem;
     // CalRenderer           *m_pRenderer;
     // Cal::UserData          m_userData;
-    // std::vector<CalMesh *> m_vectorMesh;
+    /*  std::vector<CalMesh *> */
+    m_vectorMesh: Vec<CalMesh>,
     // CalBoundingBox         m_boundingBox;
 }
 
@@ -19,9 +26,11 @@ impl CalModel {
     pub fn new(core_model: Rc<RefCell<super::core::CalCoreModel>>) -> Self {
         CalModel {
             m_pCoreModel: core_model,
+            m_vectorMesh: Vec::new(),
         }
     }
 
+    // 84 cpp
     /*****************************************************************************/
     /** Attachs a mesh.
      *
@@ -33,8 +42,36 @@ impl CalModel {
      *         \li \b true if successful
      *         \li \b false if an error happened
      *****************************************************************************/
-    pub fn attachMesh(&self, coreMeshId: u32) -> bool {
-        todo!("model.cpp line 85");
+    pub fn attachMesh(&mut self, coreMeshId: usize) -> Result<(), ModelError> {
+        let core_model = self.m_pCoreModel.borrow();
+
+        // get the core mesh
+        let pCoreMesh = core_model
+            .getCoreMesh(coreMeshId)
+            .ok_or(ModelError::IndexError((
+                coreMeshId,
+                core_model.getCoreMeshes().len(),
+            )))?;
+
+        // check if the mesh is already attached
+        for meshId in self.m_vectorMesh.iter() {
+            // check if we found the matching mesh
+            if Rc::ptr_eq(meshId.getCoreMesh(), pCoreMesh) {
+                // mesh is already active -> do nothing
+                return Ok(());
+            }
+        }
+
+        // allocate a new mesh instance
+        let pMesh = CalMesh::new(pCoreMesh.clone());
+
+        // set model in the mesh instance
+        //pMesh.setModel(this);
+
+        // insert the new mesh into the active list
+        self.m_vectorMesh.push(pMesh);
+
+        Ok(())
     }
 
     pub fn setMaterialSet(&self, setId: i32) {

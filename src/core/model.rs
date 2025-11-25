@@ -150,6 +150,33 @@ impl CalCoreModel {
         return true;
     }
 
+    /*****************************************************************************/
+    /** Provides access to a core mesh.
+     *
+     * This function returns the core mesh with the given ID.
+     *
+     * @param coreMeshId The ID of the core mesh that should be returned.
+     *
+     * @return One of the following values:
+     *         \li a pointer to the core mesh
+     *         \li \b 0 if an error happened
+     *****************************************************************************/
+    pub fn getCoreMesh(&self, coreMeshId: usize) -> Option<&Rc<RefCell<CalCoreMesh>>> {
+        self.m_vectorCoreMesh.get(coreMeshId)
+    }
+
+    // 635 cpp
+    /*****************************************************************************/
+    /** Returns the number of core meshes.
+     *
+     * This function returns the number of core meshes in the core model instance.
+     *
+     * @return The number of core meshes.
+     *****************************************************************************/
+    pub fn getCoreMeshCount(&self) -> usize {
+        self.m_vectorCoreMesh.len()
+    }
+
     //659
     /*****************************************************************************/
     /** Loads a core animation.

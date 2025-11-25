@@ -4,12 +4,16 @@
 #![allow(non_snake_case)]
 
 pub mod core;
+pub mod mesh;
 pub mod mixer;
 pub mod model;
+pub mod submesh;
 pub mod vector;
 
+pub use mesh::CalMesh;
 pub use mixer::{CalAbstractMixer, CalMixer};
 pub use model::CalModel;
+pub use submesh::CalSubmesh;
 
 pub use cgmath::Quaternion as CalQuaternion;
 pub use cgmath::Vector3 as CalVector;

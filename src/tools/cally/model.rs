@@ -31,6 +31,7 @@ pub(crate) enum ModelError {
     ScanfError(sscanf::Error),
     ParseError(std::num::ParseFloatError),
     CoreError(cal3d::core::CoreError),
+    CalModelError(cal3d::model::ModelError),
     SyntaxError,
     FormatError(String),
 }
@@ -56,6 +57,12 @@ impl From<std::num::ParseFloatError> for ModelError {
 impl From<cal3d::core::CoreError> for ModelError {
     fn from(error: cal3d::core::CoreError) -> Self {
         ModelError::CoreError(error)
+    }
+}
+
+impl From<cal3d::model::ModelError> for ModelError {
+    fn from(error: cal3d::model::ModelError) -> Self {
+        ModelError::CalModelError(error)
     }
 }
 
@@ -204,20 +211,22 @@ impl Model {
             core_model.setCoreMaterialId(materialId, 0, materialId);
         }
 
-        // Calculate Bounding Boxes
+        // Drop mut borrow, as not-mut borrow must be possible below.
+        drop(core_model);
 
+        // Calculate Bounding Boxes
         self.calCoreModel
             .borrow()
             .getCoreSkeleton()
             .borrow()
             .calculateBoundingBoxes(&self.calCoreModel);
 
-        let cal_model = CalModel::new(self.calCoreModel.clone());
+        let mut cal_model = CalModel::new(self.calCoreModel.clone());
 
         // attach all meshes to the model
-
-        for meshId in 0..self.calCoreModel.borrow().getCoreMeshes().len() as u32 {
-            cal_model.attachMesh(meshId);
+        // TODO Can we just iterate over the coreMeshes?
+        for meshId in 0..self.calCoreModel.borrow().getCoreMeshes().len() {
+            cal_model.attachMesh(meshId)?;
         }
 
         // set the material set of the whole model
