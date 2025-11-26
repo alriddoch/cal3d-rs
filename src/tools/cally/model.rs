@@ -233,9 +233,8 @@ impl Model {
         cal_model.setMaterialSet(0);
 
         let cal_model = Rc::new(RefCell::new(cal_model));
-        cal_model
-            .borrow_mut()
-            .set_mixer(CalMixer::new(cal_model.clone()));
+        let cal_mixer = CalMixer::new(cal_model.clone());
+        cal_model.borrow_mut().set_mixer(cal_mixer);
 
         // set initial animation state
         self.state = STATE_MOTION;
