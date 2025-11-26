@@ -1,5 +1,7 @@
 use super::CalMesh;
 use super::CalMixer;
+use crate::CalAbstractMixer;
+use crate::core::CalCoreModel;
 use std::{cell::RefCell, rc::Rc};
 
 #[derive(Debug)]
@@ -7,11 +9,10 @@ pub enum ModelError {
     IndexError((usize, usize)),
 }
 
-#[derive(Default)]
 pub struct CalModel {
-    m_pCoreModel: Rc<RefCell<super::core::CalCoreModel>>,
+    m_pCoreModel: Rc<RefCell<CalCoreModel>>,
     // CalSkeleton           *m_pSkeleton;
-    // m_pMixer: CalAbstractMixer,
+    m_pMixer: CalAbstractMixer,
     // CalMorphTargetMixer   *m_pMorphTargetMixer;
     // CalPhysique           *m_pPhysique;
     // CalSpringSystem       *m_pSpringSystem;
@@ -23,11 +24,16 @@ pub struct CalModel {
 }
 
 impl CalModel {
-    pub fn new(core_model: Rc<RefCell<super::core::CalCoreModel>>) -> Self {
+    pub fn new(core_model: Rc<RefCell<CalCoreModel>>) -> Self {
         CalModel {
             m_pCoreModel: core_model,
+            m_pMixer: CalAbstractMixer::None,
             m_vectorMesh: Vec::new(),
         }
+    }
+
+    pub fn set_mixer(&mut self, mixer: CalMixer) {
+        self.m_pMixer = CalAbstractMixer::CalMixer(mixer)
     }
 
     // 84 cpp
@@ -83,9 +89,29 @@ impl CalModel {
         }
     }
 
-    pub fn getMixer(&self) -> CalMixer {
-        todo!("");
+    pub fn getMixer(&self) -> Option<&CalMixer> {
+        match &self.m_pMixer {
+            CalAbstractMixer::CalMixer(mixer) => Some(mixer),
+            _ => None,
+        }
     }
+
+    // 188 cpp
+    /*****************************************************************************/
+    /** Provides access to the core model.
+     *
+     * This function returns the core model on which this model instance is based
+     * on.
+     *
+     * @return One of the following values:
+     *         \li a pointer to the core model
+     *         \li \b 0 if an error happened
+     *****************************************************************************/
+
+    pub fn getCoreModel(&self) -> &Rc<RefCell<CalCoreModel>> {
+        return &self.m_pCoreModel;
+    }
+
     // CalModel(CalCoreModel *pCoreModel);
     // ~CalModel();
 
@@ -118,4 +144,22 @@ impl CalModel {
     // void setUserData(Cal::UserData userData);
     // void update(float deltaTime);
     // void disableInternalData();
+
+    // 700 cpp
+    /*****************************************************************************/
+    /** Updates the model instance.
+     *
+     * This function updates the model instance for a given amount of time.
+     *
+     * @param deltaTime The elapsed time in seconds since the last update.
+     *****************************************************************************/
+    pub fn update(&mut self, deltaTime: f32) {
+        todo!();
+        // self.m_pMixer.updateAnimation(deltaTime);
+        // self.m_pMixer.updateSkeleton();
+        // // m_pMorpher.update(...);
+        // self.m_pMorphTargetMixer.update(deltaTime);
+        // self.m_pPhysique.update();
+        // self.m_pSpringSystem.update(deltaTime);
+    }
 }

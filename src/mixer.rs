@@ -1,4 +1,10 @@
-pub trait CalAbstractMixer {
+use crate::CalModel;
+use crate::core::CalCoreAnimation;
+use crate::{CalAnimation, CalAnimationAction, CalAnimationCycle};
+use std::ops::Deref;
+use std::{cell::RefCell, rc::Rc};
+
+trait CalMixerTrait {
     /*****************************************************************************/
     /**
     	* Is the object an instance of the default mixer (i.e. an instance of CalMixer) ?
@@ -7,7 +13,7 @@ pub trait CalAbstractMixer {
     	*         \li \b false if not an instance of CalMixer
     	*
     	*****************************************************************************/
-    fn isDefaultMixer() -> bool {
+    fn isDefaultMixer(&self) -> bool {
         false
     }
 
@@ -28,7 +34,7 @@ pub trait CalAbstractMixer {
     	* @param deltaTime The elapsed time in seconds since the last call.
     	*
     	*****************************************************************************/
-    fn updateAnimation(deltaTime: f32);
+    fn updateAnimation(&self, deltaTime: f32);
 
     /*****************************************************************************/
     /**
@@ -46,36 +52,177 @@ pub trait CalAbstractMixer {
     	* the instance was set via CalModel::setAbstractMixer.
     	*
     	*****************************************************************************/
-    fn updateSkeleton();
+    fn updateSkeleton(&self);
+}
+
+pub enum CalAbstractMixer {
+    None,
+    CalMixer(CalMixer),
+}
+
+impl CalMixerTrait for CalAbstractMixer {
+    fn isDefaultMixer(&self) -> bool {
+        match self {
+            CalAbstractMixer::CalMixer(mixer) => mixer.isDefaultMixer(),
+            _ => false,
+        }
+    }
+
+    fn updateAnimation(&self, deltaTime: f32) {
+        match self {
+            CalAbstractMixer::CalMixer(mixer) => mixer.updateAnimation(deltaTime),
+            _ => {}
+        }
+    }
+    fn updateSkeleton(&self) {
+        match self {
+            CalAbstractMixer::CalMixer(mixer) => mixer.updateSkeleton(),
+            _ => {}
+        }
+    }
 }
 
 pub struct CalMixer {
-    // 	unsigned int m_numBoneAdjustments;
+    m_numBoneAdjustments: u32,
     // BoneAdjustmentAndBoneId m_boneAdjustmentAndBoneIdArray[CalMixerBoneAdjustmentsMax];
     // virtual void applyBoneAdjustments();
-    // CalModel *m_pModel;
-    // std::vector<CalAnimation *> m_vectorAnimation;
+    m_pModel: Rc<RefCell<CalModel>>,
+    /* std::vector<CalAnimation *> */ m_vectorAnimation: Vec<CalAnimation>,
     // std::list<CalAnimationAction *> m_listAnimationAction;
-    // std::list<CalAnimationCycle *> m_listAnimationCycle;
-    // float m_animationTime;
-    // float m_animationDuration;
-    // float m_timeFactor;
+    m_listAnimationCycle: Vec<Rc<RefCell<CalAnimationCycle>>>,
+    m_animationTime: f32,
+    m_animationDuration: f32,
+    m_timeFactor: f32,
 }
 
 impl CalMixer {
-    pub fn blendCycle(&self, id: i32, weight: f32, delay: f32) -> bool {
-        todo!();
+    pub fn new(m_pModel: Rc<RefCell<CalModel>>) -> Self {
+        let coreAnimationCount = m_pModel
+            .borrow()
+            .getCoreModel()
+            .borrow()
+            .getCoreAnimationCount();
+
+        let mut vector_animation = Vec::with_capacity(coreAnimationCount);
+
+        for i in 0..coreAnimationCount {
+            vector_animation.insert(i, CalAnimation::None)
+        }
+
+        CalMixer {
+            m_numBoneAdjustments: 0,
+            m_pModel,
+            m_vectorAnimation: vector_animation,
+            m_listAnimationCycle: Vec::new(),
+            m_animationTime: 0.0,
+            m_animationDuration: 0.0,
+            m_timeFactor: 0.0,
+        }
+    }
+
+    pub fn blendCycle(&mut self, id: usize, weight: f32, delay: f32) -> bool {
+        // get the animation for the given id, with range check
+        let Some(pAnimation) = self.m_vectorAnimation.get(id) else {
+            return false;
+        };
+
+        // create a new animation instance if it is not active yet
+        if matches!(pAnimation, CalAnimation::None) {
+            // take the fast way out if we are trying to clear an inactive animation
+            if weight == 0.0 {
+                return true;
+            }
+
+			// These need to be borrowed for the lifetime of pCoreAnimation below
+            let model_scope = self.m_pModel.borrow();
+            let core_model_scope = model_scope.getCoreModel().borrow();
+
+            // get the core animation
+            let Some(pCoreAnimation) = core_model_scope.getCoreAnimation(id) else {
+                return false;
+            };
+
+            // Ensure that the animation's first and last key frame match for proper
+            // looping.
+            addExtraKeyframeForLoopedAnim(&pCoreAnimation.borrow());
+
+            // allocate a new animation cycle instance
+            let pAnimationCycle =
+                Rc::new(RefCell::new(CalAnimationCycle::new(pCoreAnimation.clone())));
+
+            drop(core_model_scope);
+            drop(model_scope);
+
+            // insert new animation into the tables
+            self.m_vectorAnimation
+                .insert(id, CalAnimation::Cycle(pAnimationCycle.clone()));
+            self.m_listAnimationCycle.push(pAnimationCycle.clone());
+
+            // blend the animation
+            return pAnimationCycle.borrow_mut().blend(weight, delay);
+        }
+
+        // check if this is really a animation cycle instance
+        let CalAnimation::Cycle(pAnimationCycle) = pAnimation else {
+            return false;
+        };
+
+        // blend the animation cycle
+        pAnimationCycle.borrow_mut().blend(weight, delay);
+        pAnimationCycle
+            .borrow()
+            .checkCallbacks(0.0, &self.m_pModel.borrow());
+
+        // clear the animation cycle from the active vector if the target weight is zero
+        if weight == 0.0 {
+            self.m_vectorAnimation.insert(id, CalAnimation::None);
+        }
+
+        return true;
     }
 }
 
-impl CalAbstractMixer for CalMixer {
-    fn isDefaultMixer() -> bool {
+fn addExtraKeyframeForLoopedAnim(pCoreAnimation: &CalCoreAnimation) {
+    const std::list<CalCoreTrack*>& listCoreTrack = pCoreAnimation->getListCoreTrack();
+
+    if (listCoreTrack.size() == 0)
+    	return;
+
+    CalCoreTrack *coreTrack = listCoreTrack.front();
+    if (coreTrack == 0)
+    	return;
+
+    CalCoreKeyframe *lastKeyframe = coreTrack->getCoreKeyframe(coreTrack->getCoreKeyframeCount() - 1);
+    if (lastKeyframe == 0)
+    	return;
+
+    if (lastKeyframe->getTime() < pCoreAnimation->getDuration())
+    {
+    	std::list<CalCoreTrack *>::const_iterator itr;
+    	for (itr = listCoreTrack.begin(); itr != listCoreTrack.end(); ++itr)
+    	{
+    		coreTrack = *itr;
+
+    		CalCoreKeyframe *firstKeyframe = coreTrack->getCoreKeyframe(0);
+    		CalCoreKeyframe *newKeyframe = new CalCoreKeyframe();
+
+    		newKeyframe->setTranslation(firstKeyframe->getTranslation());
+    		newKeyframe->setRotation(firstKeyframe->getRotation());
+    		newKeyframe->setTime(pCoreAnimation->getDuration());
+
+    		coreTrack->addCoreKeyframe(newKeyframe);
+    	}
+    }
+}
+
+impl CalMixerTrait for CalMixer {
+    fn isDefaultMixer(&self) -> bool {
         true
     }
-    fn updateAnimation(deltaTime: f32) {
+    fn updateAnimation(&self, deltaTime: f32) {
         todo!();
     }
-    fn updateSkeleton() {
+    fn updateSkeleton(&self) {
         todo!();
     }
 }

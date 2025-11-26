@@ -49,6 +49,10 @@ impl CalCoreModel {
         &self.m_vectorCoreMesh
     }
 
+    pub fn getCoreAnimationCount(&self) -> usize {
+        return self.m_vectorCoreAnimation.len();
+    }
+
     //112
     /*****************************************************************************/
     /** Adds a core animation.
@@ -59,7 +63,7 @@ impl CalCoreModel {
      *
      * @return \li the assigned animation \b ID of the added core animation
      *****************************************************************************/
-    fn addCoreAnimation(&mut self, pCoreAnimation: Rc<RefCell<CalCoreAnimation>>) -> i32 {
+    fn addCoreAnimation(&mut self, pCoreAnimation: Rc<RefCell<CalCoreAnimation>>) -> usize {
         let num = self.m_vectorCoreAnimation.len();
 
         // FIXME: Can Rc be null in Rust? No. Unclear if this is necessary for now.
@@ -71,7 +75,7 @@ impl CalCoreModel {
         // }
 
         self.m_vectorCoreAnimation.push(pCoreAnimation);
-        num as i32
+        num
     }
 
     //278
@@ -150,6 +154,25 @@ impl CalCoreModel {
         return true;
     }
 
+    // 393
+    /*****************************************************************************/
+    /** Provides access to a core animation.
+     *
+     * This function returns the core animation with the given ID.
+     *
+     * @param coreAnimationId The ID of the core animation that should be returned.
+     *
+     * @return One of the following values:
+     *         \li a pointer to the core animation
+     *         \li \b 0 if an error happened
+     *****************************************************************************/
+    pub fn getCoreAnimation(
+        &self,
+        coreAnimationId: usize,
+    ) -> Option<&Rc<RefCell<CalCoreAnimation>>> {
+        return self.m_vectorCoreAnimation.get(coreAnimationId);
+    }
+
     /*****************************************************************************/
     /** Provides access to a core mesh.
      *
@@ -220,7 +243,7 @@ impl CalCoreModel {
      *         \li the assigned \b ID of the loaded core animation
      *         \li \b -1 if an error happened
      *****************************************************************************/
-    pub fn loadCoreAnimation(&mut self, filename: &PathBuf) -> Result<i32, loader::LoaderError> {
+    pub fn loadCoreAnimation(&mut self, filename: &PathBuf) -> Result<usize, loader::LoaderError> {
         // FIXME Check if skeleton has been loaded.
         // the core skeleton has to be loaded already
         //   if(!m_pCoreSkeleton)  {

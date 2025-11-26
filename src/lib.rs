@@ -3,6 +3,7 @@
 #![allow(unused_variables)]
 #![allow(non_snake_case)]
 
+pub mod animation;
 pub mod core;
 pub mod mesh;
 pub mod mixer;
@@ -10,6 +11,7 @@ pub mod model;
 pub mod submesh;
 pub mod vector;
 
+pub use animation::{CalAnimation, CalAnimationAction, CalAnimationCycle};
 pub use mesh::CalMesh;
 pub use mixer::{CalAbstractMixer, CalMixer};
 pub use model::CalModel;

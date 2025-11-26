@@ -1,5 +1,5 @@
 use super::graphics::get_texture;
-use cal3d::CalModel;
+use cal3d::{CalMixer, CalModel};
 use cgmath::Matrix4;
 use std::path::PathBuf;
 use std::{cell::RefCell, rc::Rc};
@@ -12,8 +12,8 @@ pub const STATE_MOTION: usize = 2;
 pub struct Model {
     pub(crate) state: usize,
     calCoreModel: Rc<RefCell<cal3d::core::CalCoreModel>>,
-    calModel: Option<CalModel>,
-    animationId: [i32; 16],
+    calModel: Option<Rc<RefCell<CalModel>>>,
+    animationId: [usize; 16],
     animationCount: i32,
     meshId: [i32; 32],
     meshCount: i32,
@@ -232,21 +232,28 @@ impl Model {
         // set the material set of the whole model
         cal_model.setMaterialSet(0);
 
+        let cal_model = Rc::new(RefCell::new(cal_model));
+        cal_model
+            .borrow_mut()
+            .set_mixer(CalMixer::new(cal_model.clone()));
+
         // set initial animation state
         self.state = STATE_MOTION;
         cal_model
+            .borrow()
             .getMixer()
+            .expect("Mixer should be default")
             .blendCycle(self.animationId[STATE_MOTION], self.motionBlend[0], 0.0);
-        cal_model.getMixer().blendCycle(
-            self.animationId[STATE_MOTION + 1],
-            self.motionBlend[1],
-            0.0,
-        );
-        cal_model.getMixer().blendCycle(
-            self.animationId[STATE_MOTION + 2],
-            self.motionBlend[2],
-            0.0,
-        );
+        cal_model
+            .borrow()
+            .getMixer()
+            .expect("Mixer should be default")
+            .blendCycle(self.animationId[STATE_MOTION + 1], self.motionBlend[1], 0.0);
+        cal_model
+            .borrow()
+            .getMixer()
+            .expect("Mixer should be default")
+            .blendCycle(self.animationId[STATE_MOTION + 2], self.motionBlend[2], 0.0);
 
         self.calModel = Some(cal_model);
 
@@ -258,12 +265,16 @@ impl Model {
     // Update the model                                                           //
     // ----------------------------------------------------------------------------//
     pub fn onUpdate(&mut self, elapsedSeconds: f32) {
-        // if self.calModel == nil {
-        //     // fmt.Printf("No calmodel. Skipping update ...\n")
-        //     return;
-        // }
-        // // update the model
-        // self.calModel.Update(elapsedSeconds)
+        if self.calModel.is_none() {
+            println!("No calmodel. Skipping update ...");
+            return;
+        }
+        // update the model
+        self.calModel
+            .as_ref()
+            .unwrap()
+            .borrow_mut()
+            .update(elapsedSeconds)
     }
 
     pub fn getRenderScale(&self) -> f32 {
@@ -283,7 +294,7 @@ impl Model {
         self.motionBlend[1] = pMotionBlend[1];
         self.motionBlend[2] = pMotionBlend[2];
 
-        unimplemented!();
+        todo!();
 
         // self.calModel
         //     .GetMixer()
@@ -311,7 +322,7 @@ impl Model {
     }
 
     pub fn setState(&mut self, state: usize, delay: f32) {
-        unimplemented!();
+        todo!();
         // check if this is really a new state
         // if state != self.state {
         //     if state == STATE_IDLE {
