@@ -233,26 +233,16 @@ impl Model {
         cal_model.setMaterialSet(0);
 
         let cal_model = Rc::new(RefCell::new(cal_model));
-        let cal_mixer = CalMixer::new(cal_model.clone());
-        cal_model.borrow_mut().set_mixer(cal_mixer);
+        let mut cal_mixer = CalMixer::new(cal_model.clone());
 
         // set initial animation state
         self.state = STATE_MOTION;
-        cal_model
-            .borrow_mut()
-            .getMixerMut()
-            .expect("Mixer should be default")
-            .blendCycle(self.animationId[STATE_MOTION], self.motionBlend[0], 0.0);
-        cal_model
-            .borrow_mut()
-            .getMixerMut()
-            .expect("Mixer should be default")
-            .blendCycle(self.animationId[STATE_MOTION + 1], self.motionBlend[1], 0.0);
-        cal_model
-            .borrow_mut()
-            .getMixerMut()
-            .expect("Mixer should be default")
-            .blendCycle(self.animationId[STATE_MOTION + 2], self.motionBlend[2], 0.0);
+        cal_mixer.blendCycle(self.animationId[STATE_MOTION], self.motionBlend[0], 0.0);
+        cal_mixer.blendCycle(self.animationId[STATE_MOTION + 1], self.motionBlend[1], 0.0);
+        cal_mixer.blendCycle(self.animationId[STATE_MOTION + 2], self.motionBlend[2], 0.0);
+
+        // Delay setting mixer on CalModel until after borrows above, as CalModel is borrowed in blendCycle
+        cal_model.borrow_mut().set_mixer(cal_mixer);
 
         self.calModel = Some(cal_model);
 

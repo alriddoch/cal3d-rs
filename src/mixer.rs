@@ -4,7 +4,7 @@ use crate::{CalAnimation, CalAnimationAction, CalAnimationCycle};
 use std::ops::Deref;
 use std::{cell::RefCell, rc::Rc};
 
-trait CalMixerTrait {
+pub trait CalMixerTrait {
     /*****************************************************************************/
     /**
     	* Is the object an instance of the default mixer (i.e. an instance of CalMixer) ?
@@ -197,9 +197,11 @@ fn addExtraKeyframeForLoopedAnim(pCoreAnimation: &CalCoreAnimation) {
         return;
     };
 
+    drop(core_track);
+
     if lastKeyframe_time < core_animation_duration {
         for coreTrack in listCoreTrack.iter() {
-            let core_track_mut = coreTrack.borrow_mut();
+            let mut core_track_mut = coreTrack.borrow_mut();
             let Some(firstKeyframe) = core_track_mut.getCoreKeyframe(0) else {
                 dbg!("Core track has no keyframes");
                 continue;
@@ -214,7 +216,7 @@ fn addExtraKeyframeForLoopedAnim(pCoreAnimation: &CalCoreAnimation) {
             // newKeyframe.setRotation(firstKeyframe.getRotation());
             // newKeyframe.setTime(pCoreAnimation.getDuration());
 
-            coreTrack.borrow_mut().addCoreKeyframe(newKeyframe);
+            core_track_mut.addCoreKeyframe(newKeyframe);
         }
     }
 }

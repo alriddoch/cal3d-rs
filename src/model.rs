@@ -1,6 +1,11 @@
 use super::CalMesh;
 use super::CalMixer;
 use crate::CalAbstractMixer;
+use crate::CalMixerTrait;
+use crate::CalMorphTargetMixer;
+use crate::CalPhysique;
+use crate::CalRenderer;
+use crate::CalSpringSystem;
 use crate::core::CalCoreModel;
 use std::{cell::RefCell, rc::Rc};
 
@@ -13,11 +18,11 @@ pub struct CalModel {
     m_pCoreModel: Rc<RefCell<CalCoreModel>>,
     // CalSkeleton           *m_pSkeleton;
     m_pMixer: CalAbstractMixer,
-    // CalMorphTargetMixer   *m_pMorphTargetMixer;
-    // CalPhysique           *m_pPhysique;
-    // CalSpringSystem       *m_pSpringSystem;
-    // CalRenderer           *m_pRenderer;
-    // Cal::UserData          m_userData;
+    m_pMorphTargetMixer: Option<CalMorphTargetMixer>,
+    m_pPhysique: Option<CalPhysique>,
+    m_pSpringSystem: Option<CalSpringSystem>,
+    m_pRenderer: Option<CalRenderer>,
+    m_userData: crate::UserData,
     /*  std::vector<CalMesh *> */
     m_vectorMesh: Vec<CalMesh>,
     // CalBoundingBox         m_boundingBox;
@@ -28,12 +33,33 @@ impl CalModel {
         CalModel {
             m_pCoreModel: core_model,
             m_pMixer: CalAbstractMixer::None,
+            m_pMorphTargetMixer: None,
+            m_pPhysique: None,
+            m_pSpringSystem: None,
+            m_pRenderer: None,
+            m_userData: Box::new(0),
             m_vectorMesh: Vec::new(),
         }
     }
 
     pub fn set_mixer(&mut self, mixer: CalMixer) {
         self.m_pMixer = CalAbstractMixer::CalMixer(mixer)
+    }
+
+    pub fn set_morph_target(&mut self, morph_target: CalMorphTargetMixer) {
+        self.m_pMorphTargetMixer = Some(morph_target)
+    }
+
+    pub fn set_physique(&mut self, physique: CalPhysique) {
+        self.m_pPhysique = Some(physique)
+    }
+
+    pub fn set_spring_system(&mut self, spring_system: CalSpringSystem) {
+        self.m_pSpringSystem = Some(spring_system)
+    }
+
+    pub fn set_renderer(&mut self, renderer: CalRenderer) {
+        self.m_pRenderer = Some(renderer)
     }
 
     // 84 cpp
@@ -161,12 +187,20 @@ impl CalModel {
      * @param deltaTime The elapsed time in seconds since the last update.
      *****************************************************************************/
     pub fn update(&mut self, deltaTime: f32) {
-        todo!();
-        // self.m_pMixer.updateAnimation(deltaTime);
-        // self.m_pMixer.updateSkeleton();
-        // // m_pMorpher.update(...);
-        // self.m_pMorphTargetMixer.update(deltaTime);
-        // self.m_pPhysique.update();
-        // self.m_pSpringSystem.update(deltaTime);
+        self.m_pMixer.updateAnimation(deltaTime);
+        self.m_pMixer.updateSkeleton();
+        // m_pMorpher.update(...);
+        self.m_pMorphTargetMixer.as_mut().and_then(|m| {
+            m.update(deltaTime);
+            Option::<()>::None
+        });
+        self.m_pPhysique.as_mut().and_then(|m| {
+            m.update();
+            Option::<()>::None
+        });
+        self.m_pSpringSystem.as_mut().and_then(|m| {
+            m.update(deltaTime);
+            Option::<()>::None
+        });
     }
 }
