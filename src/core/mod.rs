@@ -15,6 +15,7 @@ mod xmlformat;
 
 pub use animation::*;
 pub use bone::*;
+pub use keyframe::CalCoreKeyframe;
 pub use loader::*;
 pub use mesh::CalCoreMesh;
 pub use model::*;

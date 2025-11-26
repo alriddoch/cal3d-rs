@@ -240,18 +240,18 @@ impl Model {
         // set initial animation state
         self.state = STATE_MOTION;
         cal_model
-            .borrow()
-            .getMixer()
+            .borrow_mut()
+            .getMixerMut()
             .expect("Mixer should be default")
             .blendCycle(self.animationId[STATE_MOTION], self.motionBlend[0], 0.0);
         cal_model
-            .borrow()
-            .getMixer()
+            .borrow_mut()
+            .getMixerMut()
             .expect("Mixer should be default")
             .blendCycle(self.animationId[STATE_MOTION + 1], self.motionBlend[1], 0.0);
         cal_model
-            .borrow()
-            .getMixer()
+            .borrow_mut()
+            .getMixerMut()
             .expect("Mixer should be default")
             .blendCycle(self.animationId[STATE_MOTION + 2], self.motionBlend[2], 0.0);
 

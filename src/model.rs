@@ -96,6 +96,13 @@ impl CalModel {
         }
     }
 
+    pub fn getMixerMut(&mut self) -> Option<&mut CalMixer> {
+        match &mut self.m_pMixer {
+            CalAbstractMixer::CalMixer(mixer) => Some(mixer),
+            _ => None,
+        }
+    }
+
     // 188 cpp
     /*****************************************************************************/
     /** Provides access to the core model.

@@ -10,6 +10,7 @@ use cgmath::InnerSpace;
 use crate::core::submesh::Influence;
 use crate::{CalQuaternion, CalVector};
 
+use super::CoreError;
 use super::animation::CalCoreAnimation;
 use super::bone::{CalCoreBone, CalLightType};
 use super::bufreadersource::BufReaderSource;
@@ -22,7 +23,6 @@ use super::submesh::CalCoreSubmesh;
 use super::submorphtarget::CalCoreSubMorphTarget;
 use super::track::CalCoreTrack;
 use super::xmlformat;
-use super::CoreError;
 
 const SKELETON_FILE_MAGIC: &[u8; 4] = b"CSF\0";
 const ANIMATION_FILE_MAGIC: &[u8; 4] = b"CAF\0";
@@ -307,7 +307,7 @@ pub fn loadCoreAnimationFromSource(
     }
 
     // load all core bones
-    let mut animations: Vec<Rc<CalCoreTrack>> = Vec::new();
+    let mut animations: Vec<Rc<RefCell<CalCoreTrack>>> = Vec::new();
 
     for trackId in 0..trackCount {
         // load the core track
@@ -1047,7 +1047,7 @@ pub fn loadCoreTrack(
     skeleton: &Rc<RefCell<CalCoreSkeleton>>,
     version: i32,
     use_animation_compression: bool,
-) -> Result<Rc<CalCoreTrack>, LoaderError> {
+) -> Result<Rc<RefCell<CalCoreTrack>>, LoaderError> {
     // if(!dataSrc.ok())
     // {
     // dataSrc.setError();
@@ -1128,7 +1128,7 @@ pub fn loadCoreTrack(
                     "Invalid bone ID {core_bone_id} in animation"
                 )))?;
 
-            if (bone.borrow().getParentId() == -1) {
+            if bone.borrow().getParentId() == -1 {
                 // root bone
                 // rotate root bone quaternion
                 let mut rot = pCoreKeyframe.getRotation().clone();
@@ -1155,13 +1155,13 @@ pub fn loadCoreTrack(
     // pCoreTrack.setHighRangeRequired( highRangeRequired );
     // pCoreTrack.setTranslationIsDynamic( translationIsDynamic );
 
-    let pCoreTrack = Rc::new(CalCoreTrack::new(
+    let pCoreTrack = CalCoreTrack::new(
         core_bone_id,
         translation_required,
         high_range_required,
         translation_is_dynamic,
         core_key_frames,
-    ));
+    );
 
     if collapseSequencesOn {
         pCoreTrack.collapseSequences(translationTolerance, rotationToleranceDegrees);
@@ -1173,7 +1173,7 @@ pub fn loadCoreTrack(
         pCoreTrack.compress(translationTolerance, rotationToleranceDegrees, skeleton);
     }
 
-    Ok(pCoreTrack)
+    Ok(Rc::new(RefCell::new(pCoreTrack)))
 }
 
 const InvalidCoord: f32 = 1e10;

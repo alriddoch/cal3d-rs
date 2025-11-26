@@ -1,5 +1,5 @@
 use crate::CalModel;
-use crate::core::CalCoreAnimation;
+use crate::core::{CalCoreAnimation, CalCoreKeyframe};
 use crate::{CalAnimation, CalAnimationAction, CalAnimationCycle};
 use std::ops::Deref;
 use std::{cell::RefCell, rc::Rc};
@@ -133,7 +133,7 @@ impl CalMixer {
                 return true;
             }
 
-			// These need to be borrowed for the lifetime of pCoreAnimation below
+            // These need to be borrowed for the lifetime of pCoreAnimation below
             let model_scope = self.m_pModel.borrow();
             let core_model_scope = model_scope.getCoreModel().borrow();
 
@@ -183,35 +183,39 @@ impl CalMixer {
 }
 
 fn addExtraKeyframeForLoopedAnim(pCoreAnimation: &CalCoreAnimation) {
-    const std::list<CalCoreTrack*>& listCoreTrack = pCoreAnimation->getListCoreTrack();
+    let core_animation_duration = pCoreAnimation.getDuration();
+    let listCoreTrack = pCoreAnimation.getListCoreTrack();
 
-    if (listCoreTrack.size() == 0)
-    	return;
+    let Some(core_track) = listCoreTrack.first().map(|r| r.borrow()) else {
+        return;
+    };
 
-    CalCoreTrack *coreTrack = listCoreTrack.front();
-    if (coreTrack == 0)
-    	return;
+    let Some(lastKeyframe_time) = core_track
+        .getCoreKeyframe(core_track.getCoreKeyframeCount() - 1)
+        .map(|frame| frame.getTime())
+    else {
+        return;
+    };
 
-    CalCoreKeyframe *lastKeyframe = coreTrack->getCoreKeyframe(coreTrack->getCoreKeyframeCount() - 1);
-    if (lastKeyframe == 0)
-    	return;
+    if lastKeyframe_time < core_animation_duration {
+        for coreTrack in listCoreTrack.iter() {
+            let core_track_mut = coreTrack.borrow_mut();
+            let Some(firstKeyframe) = core_track_mut.getCoreKeyframe(0) else {
+                dbg!("Core track has no keyframes");
+                continue;
+            };
+            let newKeyframe = CalCoreKeyframe::new(
+                core_animation_duration,
+                firstKeyframe.getTranslation().clone(),
+                firstKeyframe.getRotation().clone(),
+            );
 
-    if (lastKeyframe->getTime() < pCoreAnimation->getDuration())
-    {
-    	std::list<CalCoreTrack *>::const_iterator itr;
-    	for (itr = listCoreTrack.begin(); itr != listCoreTrack.end(); ++itr)
-    	{
-    		coreTrack = *itr;
+            // newKeyframe.setTranslation(firstKeyframe.getTranslation());
+            // newKeyframe.setRotation(firstKeyframe.getRotation());
+            // newKeyframe.setTime(pCoreAnimation.getDuration());
 
-    		CalCoreKeyframe *firstKeyframe = coreTrack->getCoreKeyframe(0);
-    		CalCoreKeyframe *newKeyframe = new CalCoreKeyframe();
-
-    		newKeyframe->setTranslation(firstKeyframe->getTranslation());
-    		newKeyframe->setRotation(firstKeyframe->getRotation());
-    		newKeyframe->setTime(pCoreAnimation->getDuration());
-
-    		coreTrack->addCoreKeyframe(newKeyframe);
-    	}
+            coreTrack.borrow_mut().addCoreKeyframe(newKeyframe);
+        }
     }
 }
 

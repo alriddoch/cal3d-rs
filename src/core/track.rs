@@ -37,13 +37,39 @@ impl CalCoreTrack {
         }
     }
 
+    // 73
+    pub fn addCoreKeyframe(&mut self, pCoreKeyframe: CalCoreKeyframe) -> bool {
+        self.m_keyframes.push(Rc::new(pCoreKeyframe));
+        let mut idx = self.m_keyframes.len() - 1;
+        while idx > 0 && self.m_keyframes[idx].getTime() < self.m_keyframes[idx - 1].getTime() {
+            self.m_keyframes.swap(idx, idx - 1);
+            idx -= 1;
+        }
+        return true;
+    }
+
     //226
-    pub fn compress(&self, translationTolerance: f64, rotationToleranceDegrees: f64, skel: &Rc<RefCell<CalCoreSkeleton>>) {
+    pub fn compress(
+        &self,
+        translationTolerance: f64,
+        rotationToleranceDegrees: f64,
+        skel: &Rc<RefCell<CalCoreSkeleton>>,
+    ) {
         todo!();
     }
 
     //344
     pub fn collapseSequences(&self, translationTolerance: f64, rotationToleranceDegrees: f64) {
         todo!();
+    }
+
+    // 615 cpp
+    pub fn getCoreKeyframeCount(&self) -> usize {
+        self.m_keyframes.len()
+    }
+
+    // 620 cpp
+    pub fn getCoreKeyframe(&self, idx: usize) -> Option<&Rc<CalCoreKeyframe>> {
+        self.m_keyframes.get(idx)
     }
 }

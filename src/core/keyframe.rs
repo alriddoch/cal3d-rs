@@ -8,7 +8,15 @@ pub struct CalCoreKeyframe {
 
 impl CalCoreKeyframe {
     pub fn new(m_time: f32, m_translation: CalVector<f32>, m_rotation: CalQuaternion<f32>) -> Self {
-        CalCoreKeyframe{m_time, m_translation, m_rotation}
+        CalCoreKeyframe {
+            m_time,
+            m_translation,
+            m_rotation,
+        }
+    }
+
+    pub fn getTime(&self) -> f32 {
+        self.m_time
     }
 
     pub fn getTranslation(&self) -> &CalVector<f32> {
