@@ -86,6 +86,94 @@ impl CalAnimationAction {
             m_manualOn: false,
         }
     }
+
+    pub fn getState(&self) -> &State {
+        &self.m_state
+    }
+
+    pub fn getTime(&self) -> f32 {
+        self.m_time
+    }
+
+    pub fn getWeight(&self) -> f32 {
+        self.m_weight
+    }
+
+    // 290 cpp
+    /*****************************************************************************/
+    /** Updates the animation action instance.
+     *
+     * This function updates the animation action instance for a given amount of
+     * time.  It has no effect on manual actions.
+     *
+     * @param deltaTime The elapsed time in seconds since the last update.
+     *
+     * @return One of the following values:
+     *         \li \b true if the animation action instance is still active or is manual
+     *         \li \b false if the execution of the animation action instance has
+     *             ended
+     *****************************************************************************/
+    pub fn update(&mut self, deltaTime: f32) -> bool {
+        // Mixer should not call update on manual actions.
+        // Return true, not false, if manual, because we ignore manual, and our
+        // return parameter indicates whether the action has ended.  A manual action
+        // doesn't end.
+        if !matches!(
+            self.m_sequencingMode,
+            SequencingMode::SequencingModeAutomatic
+        ) {
+            return true;
+        }
+
+        // update animation action time
+
+        if !matches!(self.m_state, State::STATE_STOPPED) {
+            self.m_time = self.m_time + deltaTime * self.m_timeFactor;
+        }
+
+        // handle IN phase
+        if matches!(self.m_state, State::STATE_IN) {
+            // check if we are still in the IN phase
+            if self.m_time < self.m_delayIn {
+                self.m_weight = self.m_time / self.m_delayIn * self.m_weightTarget;
+                //self.m_weight = self.m_time / self.m_delayIn;
+            } else {
+                self.m_state = State::STATE_STEADY;
+                self.m_weight = self.m_weightTarget;
+            }
+        }
+
+        // handle STEADY
+        if matches!(self.m_state, State::STATE_STEADY) {
+            // check if we reached OUT phase
+            if !self.m_autoLock
+                && self.m_time >= self.m_pCoreAnimation.borrow().getDuration() - self.m_delayOut
+            {
+                self.m_state = State::STATE_OUT;
+            } else if self.m_autoLock && self.m_time > self.m_pCoreAnimation.borrow().getDuration()
+            {
+                // if the anim is supposed to stay locked on last keyframe, reset the time here.
+                self.m_state = State::STATE_STOPPED;
+                self.m_time = self.m_pCoreAnimation.borrow().getDuration();
+            }
+        }
+
+        // handle OUT phase
+        if matches!(self.m_state, State::STATE_OUT) {
+            // check if we are still in the OUT phase
+            if self.m_time < self.m_pCoreAnimation.borrow().getDuration() {
+                self.m_weight = (self.m_pCoreAnimation.borrow().getDuration() - self.m_time)
+                    / self.m_delayOut
+                    * self.m_weightTarget;
+            } else {
+                // we reached the end of the action animation
+                self.m_weight = 0.0;
+                return false;
+            }
+        }
+
+        return true;
+    }
 }
 
 #[derive(Clone)]
@@ -114,6 +202,18 @@ impl CalAnimationCycle {
             m_targetDelay: 0.0,
             m_targetWeight: 0.0,
         }
+    }
+
+    pub fn getState(&self) -> &State {
+        &self.m_state
+    }
+
+    pub fn getTime(&self) -> f32 {
+        self.m_time
+    }
+
+    pub fn getWeight(&self) -> f32 {
+        self.m_weight
     }
 
     pub fn blend(&mut self, weight: f32, delay: f32) -> bool {

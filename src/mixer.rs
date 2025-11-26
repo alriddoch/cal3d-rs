@@ -88,7 +88,7 @@ pub struct CalMixer {
     // virtual void applyBoneAdjustments();
     m_pModel: Rc<RefCell<CalModel>>,
     /* std::vector<CalAnimation *> */ m_vectorAnimation: Vec<CalAnimation>,
-    // std::list<CalAnimationAction *> m_listAnimationAction;
+    m_listAnimationAction: Vec<Rc<RefCell<CalAnimationAction>>>,
     m_listAnimationCycle: Vec<Rc<RefCell<CalAnimationCycle>>>,
     m_animationTime: f32,
     m_animationDuration: f32,
@@ -113,6 +113,7 @@ impl CalMixer {
             m_numBoneAdjustments: 0,
             m_pModel,
             m_vectorAnimation: vector_animation,
+            m_listAnimationAction: Vec::new(),
             m_listAnimationCycle: Vec::new(),
             m_animationTime: 0.0,
             m_animationDuration: 0.0,
@@ -225,9 +226,87 @@ impl CalMixerTrait for CalMixer {
     fn isDefaultMixer(&self) -> bool {
         true
     }
+
     fn updateAnimation(&self, deltaTime: f32) {
-        todo!();
+        use crate::animation::State;
+
+        // update the current animation time
+        if self.m_animationDuration == 0.0 {
+            self.m_animationTime = 0.0;
+        } else {
+            self.m_animationTime += deltaTime * self.m_timeFactor;
+            if self.m_animationTime >= self.m_animationDuration || self.m_animationTime < 0.0 {
+                self.m_animationTime = self.m_animationTime % self.m_animationDuration;
+            }
+            if self.m_animationTime < 0.0 {
+                self.m_animationTime += self.m_animationDuration;
+            }
+        }
+
+        // update all active animation actions of this model
+        self.m_listAnimationAction.retain_mut(|action| {
+            let animation_action = action.borrow_mut();
+            if animation_action.update(deltaTime) {
+                animation_action.checkCallbacks(animation_action.getTime(), self.m_pModel);
+                true
+            } else {
+                // animation action has ended, destroy and remove it from the animation list
+                animation_action.completeCallbacks(self.m_pModel);
+
+                false
+            }
+        });
+
+        // let iteratorAnimationAction = self.m_listAnimationAction.iter().peekable();
+
+        // while let Some(action) = iteratorAnimationAction.peek() {
+        //     let animation_action = action.borrow_mut();
+        //     // update and check if animation action is still active
+        //     if animation_action.update(deltaTime) {
+        //         animation_action.checkCallbacks(animation_action.getTime(), self.m_pModel);
+        //         iteratorAnimationAction.next();
+        //     } else {
+        //         // animation action has ended, destroy and remove it from the animation list
+        //         animation_action.completeCallbacks(self.m_pModel);
+        //         delete(*iteratorAnimationAction);
+        //         iteratorAnimationAction = self.m_listAnimationAction.erase(iteratorAnimationAction);
+        //     }
+        // }
+
+        // todo: update all active animation poses of this model
+
+        // update the weight of all active animation cycles of this model
+        let mut accumulatedWeight = 0.0;
+        let mut accumulatedDuration = 0.0;
+
+        self.m_listAnimationCycle.retain_mut(|cycle| {
+            let animation_cycle = cycle.borrow_mut();
+            // update and check if animation cycle is still active
+            if animation_cycle.update(deltaTime) {
+                // check if it is in sync. if yes, update accumulated weight and duration
+                if matches!(animation_cycle.getState(), State::STATE_SYNC) {
+                    accumulatedWeight += animation_cycle.getWeight();
+                    accumulatedDuration += animation_cycle.getWeight()
+                        * animation_cycle.getCoreAnimation().getDuration();
+                }
+
+                animation_cycle.checkCallbacks(self.m_animationTime, &self.m_pModel.borrow());
+                true
+            } else {
+                // animation cycle has ended, destroy and remove it from the animation list
+                animation_cycle.completeCallbacks(self.m_pModel);
+                false
+            }
+        });
+
+        // adjust the global animation cycle duration
+        if accumulatedWeight > 0.0 {
+            self.m_animationDuration = accumulatedDuration / accumulatedWeight;
+        } else {
+            self.m_animationDuration = 0.0;
+        }
     }
+
     fn updateSkeleton(&self) {
         todo!();
     }
