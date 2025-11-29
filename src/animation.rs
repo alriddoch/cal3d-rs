@@ -174,6 +174,14 @@ impl CalAnimationAction {
 
         return true;
     }
+
+    pub fn checkCallbacks(&self, animationTime: f32, model: &Rc<RefCell<CalModel>>) {
+        // TODO Write a callback system, when it's clear what it's for.
+    }
+
+    pub fn completeCallbacks(&self, model: &Rc<RefCell<CalModel>>) {
+        // TODO Write a callback system, when it's clear what it's for.
+    }
 }
 
 #[derive(Clone)]
@@ -277,12 +285,13 @@ impl CalAnimationCycle {
 
         // update animation cycle time if it is in async state
         if matches!(self.getState(), State::STATE_ASYNC) {
+            let animation_duration = self.getCoreAnimation().borrow().getDuration();
             self.setTime(self.getTime() + deltaTime * self.getTimeFactor());
-            if self.getTime() >= self.getCoreAnimation().borrow().getDuration() {
-                self.setTime((self.getTime() % self.getCoreAnimation().borrow().getDuration()));
+            if self.getTime() >= animation_duration {
+                self.setTime(self.getTime() % animation_duration);
             }
             if self.getTime() < 0.0 {
-                self.setTime(self.getTime() + self.getCoreAnimation().borrow().getDuration());
+                self.setTime(self.getTime() + animation_duration);
             }
         }
 
@@ -290,7 +299,7 @@ impl CalAnimationCycle {
     }
 
     // FIXME TODO This is a common method to cycle and action. How do we have common methods, and common fields?
-    pub fn checkCallbacks(&self, animationTime: f32, model: &CalModel) {
+    pub fn checkCallbacks(&self, animationTime: f32, model: &Rc<RefCell<CalModel>>) {
         // TODO Write a callback system, when it's clear what it's for.
 
         // let list = self.m_pCoreAnimation.getCallbackList();
@@ -323,5 +332,9 @@ impl CalAnimationCycle {
         //         m_lastCallbackTimes[i] = animationTime;
         //     }
         // }
+    }
+
+    pub fn completeCallbacks(&self, model: &Rc<RefCell<CalModel>>) {
+        // TODO Write a callback system, when it's clear what it's for.
     }
 }

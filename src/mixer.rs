@@ -34,7 +34,7 @@ pub trait CalMixerTrait {
     	* @param deltaTime The elapsed time in seconds since the last call.
     	*
     	*****************************************************************************/
-    fn updateAnimation(&self, deltaTime: f32);
+    fn updateAnimation(&mut self, deltaTime: f32);
 
     /*****************************************************************************/
     /**
@@ -68,7 +68,7 @@ impl CalMixerTrait for CalAbstractMixer {
         }
     }
 
-    fn updateAnimation(&self, deltaTime: f32) {
+    fn updateAnimation(&mut self, deltaTime: f32) {
         match self {
             CalAbstractMixer::CalMixer(mixer) => mixer.updateAnimation(deltaTime),
             _ => {}
@@ -170,9 +170,7 @@ impl CalMixer {
 
         // blend the animation cycle
         pAnimationCycle.borrow_mut().blend(weight, delay);
-        pAnimationCycle
-            .borrow()
-            .checkCallbacks(0.0, &self.m_pModel.borrow());
+        pAnimationCycle.borrow().checkCallbacks(0.0, &self.m_pModel);
 
         // clear the animation cycle from the active vector if the target weight is zero
         if weight == 0.0 {
@@ -227,7 +225,7 @@ impl CalMixerTrait for CalMixer {
         true
     }
 
-    fn updateAnimation(&self, deltaTime: f32) {
+    fn updateAnimation(&mut self, deltaTime: f32) {
         use crate::animation::State;
 
         // update the current animation time
@@ -245,13 +243,13 @@ impl CalMixerTrait for CalMixer {
 
         // update all active animation actions of this model
         self.m_listAnimationAction.retain_mut(|action| {
-            let animation_action = action.borrow_mut();
+            let mut animation_action = action.borrow_mut();
             if animation_action.update(deltaTime) {
-                animation_action.checkCallbacks(animation_action.getTime(), self.m_pModel);
+                animation_action.checkCallbacks(animation_action.getTime(), &self.m_pModel);
                 true
             } else {
                 // animation action has ended, destroy and remove it from the animation list
-                animation_action.completeCallbacks(self.m_pModel);
+                animation_action.completeCallbacks(&self.m_pModel);
 
                 false
             }
@@ -280,21 +278,21 @@ impl CalMixerTrait for CalMixer {
         let mut accumulatedDuration = 0.0;
 
         self.m_listAnimationCycle.retain_mut(|cycle| {
-            let animation_cycle = cycle.borrow_mut();
+            let mut animation_cycle = cycle.borrow_mut();
             // update and check if animation cycle is still active
             if animation_cycle.update(deltaTime) {
                 // check if it is in sync. if yes, update accumulated weight and duration
                 if matches!(animation_cycle.getState(), State::STATE_SYNC) {
                     accumulatedWeight += animation_cycle.getWeight();
                     accumulatedDuration += animation_cycle.getWeight()
-                        * animation_cycle.getCoreAnimation().getDuration();
+                        * animation_cycle.getCoreAnimation().borrow().getDuration();
                 }
 
-                animation_cycle.checkCallbacks(self.m_animationTime, &self.m_pModel.borrow());
+                animation_cycle.checkCallbacks(self.m_animationTime, &self.m_pModel);
                 true
             } else {
                 // animation cycle has ended, destroy and remove it from the animation list
-                animation_cycle.completeCallbacks(self.m_pModel);
+                animation_cycle.completeCallbacks(&self.m_pModel);
                 false
             }
         });
