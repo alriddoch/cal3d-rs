@@ -204,6 +204,10 @@ impl CalAnimationCycle {
         }
     }
 
+    pub fn getCoreAnimation(&self) -> &Rc<RefCell<CalCoreAnimation>> {
+        &self.m_pCoreAnimation
+    }
+
     pub fn getState(&self) -> &State {
         &self.m_state
     }
@@ -212,13 +216,75 @@ impl CalAnimationCycle {
         self.m_time
     }
 
+    pub fn getTimeFactor(&self) -> f32 {
+        self.m_timeFactor
+    }
+
     pub fn getWeight(&self) -> f32 {
         self.m_weight
+    }
+
+    pub fn setState(&mut self, state: &State) {
+        self.m_state = state.clone();
+    }
+
+    pub fn setTime(&mut self, time: f32) {
+        self.m_time = time;
+    }
+
+    pub fn setWeight(&mut self, weight: f32) {
+        self.m_weight = weight;
     }
 
     pub fn blend(&mut self, weight: f32, delay: f32) -> bool {
         self.m_targetWeight = weight;
         self.m_targetDelay = delay;
+
+        return true;
+    }
+
+    // 95 cpp
+    /*****************************************************************************/
+    /** Updates the animation cycle instance.
+     *
+     * This function updates the animation cycle instance for a given amount of
+     * time.
+     *
+     * @param deltaTime The elapsed time in seconds since the last update.
+     *
+     * @return One of the following values:
+     *         \li \b true if the animation cycle instance is still active
+     *         \li \b false if the execution of the animation cycle instance has
+     *             ended
+     *****************************************************************************/
+    pub fn update(&mut self, deltaTime: f32) -> bool {
+        if self.m_targetDelay <= f32::abs(deltaTime) {
+            // we reached target delay, set to full weight
+            self.setWeight(self.m_targetWeight);
+            self.m_targetDelay = 0.0;
+
+            // check if we reached the cycles end
+            if self.getWeight() == 0.0 {
+                return false;
+            }
+        } else {
+            // not reached target delay yet, interpolate between current and target weight
+
+            let factor = deltaTime / self.m_targetDelay;
+            self.setWeight((1.0 - factor) * self.getWeight() + factor * self.m_targetWeight);
+            self.m_targetDelay -= deltaTime;
+        }
+
+        // update animation cycle time if it is in async state
+        if matches!(self.getState(), State::STATE_ASYNC) {
+            self.setTime(self.getTime() + deltaTime * self.getTimeFactor());
+            if self.getTime() >= self.getCoreAnimation().borrow().getDuration() {
+                self.setTime((self.getTime() % self.getCoreAnimation().borrow().getDuration()));
+            }
+            if self.getTime() < 0.0 {
+                self.setTime(self.getTime() + self.getCoreAnimation().borrow().getDuration());
+            }
+        }
 
         return true;
     }
