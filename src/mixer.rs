@@ -1,6 +1,7 @@
 use crate::CalModel;
 use crate::core::{CalCoreAnimation, CalCoreKeyframe};
 use crate::{CalAnimation, CalAnimationAction, CalAnimationCycle};
+use crate::{CalQuaternion, CalVector};
 use std::ops::Deref;
 use std::{cell::RefCell, rc::Rc};
 
@@ -82,9 +83,48 @@ impl CalMixerTrait for CalAbstractMixer {
     }
 }
 
+const FlagPosRot: u32 = 1;
+const FlagMeshScale: u32 = 2;
+
+#[derive(Copy, Clone)]
+struct BoneAdjustment {
+    // What parts of the adjustment are to be applied?
+    pub flags_: u32,
+    // Relative to the parent frame of reference.
+    pub localPos_: CalVector<f32>,
+    pub localOri_: CalQuaternion<f32>,
+    // Scales X, Y, and Z of mesh by these parameters.  The scale parameters are with
+    // respect to the absolute coordinate space, e.g., Z is up in 3dMax, as opposed
+    // to the local coordinate space of the bone.
+    pub meshScaleAbsolute_: CalVector<f32>,
+    // The adjustment is a highest priority "replace" animation for the bone.  Lower priority
+    // animations for the bone, including other replace animations, will be attenuated by 1 - rampValue.
+    pub rampValue_: f32,
+}
+
+impl Default for BoneAdjustment {
+    fn default() -> Self {
+        Self {
+            flags_: 0,
+            localPos_: CalVector::new(0.0, 0.0, 0.0),
+            localOri_: CalQuaternion::new(0.0, 1.0, 0.0, 0.0),
+            meshScaleAbsolute_: CalVector::new(0.0, 0.0, 0.0),
+            rampValue_: 0.0,
+        }
+    }
+}
+
+#[derive(Clone, Copy, Default)]
+struct BoneAdjustmentAndBoneId {
+    pub boneAdjustment_: BoneAdjustment,
+    pub boneId_: usize,
+}
+
+const CalMixerBoneAdjustmentsMax: usize = 20;
+
 pub struct CalMixer {
-    m_numBoneAdjustments: u32,
-    // BoneAdjustmentAndBoneId m_boneAdjustmentAndBoneIdArray[CalMixerBoneAdjustmentsMax];
+    m_numBoneAdjustments: usize,
+    m_boneAdjustmentAndBoneIdArray: [BoneAdjustmentAndBoneId; CalMixerBoneAdjustmentsMax],
     // virtual void applyBoneAdjustments();
     m_pModel: Rc<RefCell<CalModel>>,
     /* std::vector<CalAnimation *> */ m_vectorAnimation: Vec<CalAnimation>,
@@ -111,6 +151,8 @@ impl CalMixer {
 
         CalMixer {
             m_numBoneAdjustments: 0,
+            m_boneAdjustmentAndBoneIdArray: [BoneAdjustmentAndBoneId::default();
+                CalMixerBoneAdjustmentsMax],
             m_pModel,
             m_vectorAnimation: vector_animation,
             m_listAnimationAction: Vec::new(),
@@ -121,6 +163,7 @@ impl CalMixer {
         }
     }
 
+    // 599 cpp
     pub fn blendCycle(&mut self, id: usize, weight: f32, delay: f32) -> bool {
         // get the animation for the given id, with range check
         let Some(pAnimation) = self.m_vectorAnimation.get(id) else {
@@ -179,6 +222,38 @@ impl CalMixer {
 
         return true;
     }
+
+    // 946 cpp
+    fn applyBoneAdjustments(&mut self) {
+        let pSkeleton = self.m_pModel.borrow().getSkeleton();
+        let vectorBone = pSkeleton.borrow().getVectorBone();
+        for i in 0..self.m_numBoneAdjustments {
+            let ba = &self.m_boneAdjustmentAndBoneIdArray[i];
+            let bo = vectorBone[ba.boneId_];
+            let cbo = bo.getCoreBone();
+            if ba.boneAdjustment_.flags_ & FlagMeshScale == FlagMeshScale {
+                bo.setMeshScaleAbsolute(ba.boneAdjustment_.meshScaleAbsolute_);
+            }
+            if ba.boneAdjustment_.flags_ & FlagPosRot == FlagPosRot {
+                let localPos = cbo.getTranslation();
+                let adjustedLocalPos = *localPos;
+                let adjustedLocalOri = ba.boneAdjustment_.localOri_;
+                let scale = 1.0;
+                let rampValue = ba.boneAdjustment_.rampValue_;
+                let replace = true;
+                let unrampedWeight = 1.0;
+                bo.blendState(
+                    unrampedWeight,
+                    adjustedLocalPos,
+                    adjustedLocalOri,
+                    scale,
+                    replace,
+                    rampValue,
+                    true,
+                );
+            }
+        }
+    }
 }
 
 fn addExtraKeyframeForLoopedAnim(pCoreAnimation: &CalCoreAnimation) {
@@ -225,6 +300,7 @@ impl CalMixerTrait for CalMixer {
         true
     }
 
+    // 846 cpp
     fn updateAnimation(&mut self, deltaTime: f32) {
         use crate::animation::State;
 
@@ -343,7 +419,8 @@ impl CalMixerTrait for CalMixer {
                     // get the current translation and rotation
                     // CalVector translation;
                     // CalQuaternion rotation;
-                    pTrack.getState(pAction.borrow().getTime(), translation, rotation);
+                    let (translation, rotation) =
+                        pTrack.borrow().getState(pAction.borrow().getTime());
 
                     // Replace and CrossFade both blend with the replace function.
                     let compFunc = pAction.getCompositionFunction();

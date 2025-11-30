@@ -24,6 +24,9 @@ pub struct CalBone {
 }
 
 impl CalBone {
+    pub fn getCoreBone(&self) -> &Rc<CalCoreBone> {
+        &self.m_pCoreBone
+    }
     // 328
     /*****************************************************************************/
     /** Clears the current state.
@@ -37,5 +40,18 @@ impl CalBone {
         self.m_accumulatedReplacementAttenuation = 1.0;
         self.m_firstBlendScale = 1.0;
         self.m_meshScaleAbsolute = CalVector::<f32>::new(1.0, 1.0, 1.0);
+    }
+
+    // 343 cpp
+    /*****************************************************************************/
+    /** Resets the bone transform state variables for rotation and translation.
+     *
+     * This function changes the state of the bone to its default non-animated
+     * position and orientation. Child bones are unaffected and may be animated
+     * independently.
+     *****************************************************************************/
+    pub fn setCoreTransformStateVariables(&mut self) {
+        self.m_translation = *self.m_pCoreBone.getTranslation();
+        self.m_rotation = *self.m_pCoreBone.getRotation();
     }
 }

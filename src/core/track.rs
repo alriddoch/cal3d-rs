@@ -1,8 +1,9 @@
-use std::cell::RefCell;
-use std::rc::Rc;
-use crate::{CalQuaternion, CalVector};
 use super::keyframe::CalCoreKeyframe;
 use super::skeleton::CalCoreSkeleton;
+use crate::vector::blend::Blend;
+use crate::{CalQuaternion, CalVector};
+use std::cell::RefCell;
+use std::rc::Rc;
 
 pub struct CalCoreTrack {
     // /// The index of the associated CoreBone in the CoreSkeleton.
@@ -68,97 +69,96 @@ impl CalCoreTrack {
     }
 
     // 485 cpp
-     /*****************************************************************************/
-/** Returns a specified state.
-  *
-  * This function returns the state (translation and rotation of the core bone)
-  * for the specified time and duration.
-  *
-  * @param time The time in seconds at which the state should be returned.
-  * @param translation A reference to the translation reference that will be
-  *                    filled with the specified state.
-  * @param rotation A reference to the rotation reference that will be filled
-  *                 with the specified state.
-  *
-  * @return One of the following values:
-  *         \li \b true if successful
-  *         \li \b false if an error happened
-  *****************************************************************************/
+    /*****************************************************************************/
+    /** Returns a specified state.
+     *
+     * This function returns the state (translation and rotation of the core bone)
+     * for the specified time and duration.
+     *
+     * @param time The time in seconds at which the state should be returned.
+     * @param translation A reference to the translation reference that will be
+     *                    filled with the specified state.
+     * @param rotation A reference to the rotation reference that will be filled
+     *                 with the specified state.
+     *
+     * @return One of the following values:
+     *         \li \b true if successful
+     *         \li \b false if an error happened
+     *****************************************************************************/
 
-pub fn getState(&self, time: f32 /* , CalVector& translation, CalQuaternion& rotation */) -> (CalVector<f32>, CalQuaternion<f32>) {
+    pub fn getState(
+        &self,
+        time: f32, /* , CalVector& translation, CalQuaternion& rotation */
+    ) -> (CalVector<f32>, CalQuaternion<f32>) {
+        // get the keyframe after the requested time
+        let mut iteratorCoreKeyframeAfter = self.getUpperBound(time);
 
-  // get the keyframe after the requested time
-  let iteratorCoreKeyframeAfter = getUpperBound(time);
+        // check if the time is after the last keyframe
+        if iteratorCoreKeyframeAfter == self.m_keyframes.len() - 1 {
+            // return the last keyframe state
+            iteratorCoreKeyframeAfter -= 1;
+            let rotation = self.m_keyframes[iteratorCoreKeyframeAfter].getRotation();
+            let translation = self.m_keyframes[iteratorCoreKeyframeAfter].getTranslation();
 
-  // check if the time is after the last keyframe
-  if(iteratorCoreKeyframeAfter == self.m_keyframes.end()) {
-    // return the last keyframe state
-    --iteratorCoreKeyframeAfter;
-    rotation = (*iteratorCoreKeyframeAfter).getRotation();
-    translation = (*iteratorCoreKeyframeAfter).getTranslation();
+            return (translation.clone(), rotation.clone());
+        }
 
-    return true;
-  }
+        // check if the time is before the first keyframe
+        if iteratorCoreKeyframeAfter == 0 {
+            // return the first keyframe state
+            let rotation = self.m_keyframes[iteratorCoreKeyframeAfter].getRotation();
+            let translation = self.m_keyframes[iteratorCoreKeyframeAfter].getTranslation();
 
-  // check if the time is before the first keyframe
-  if(iteratorCoreKeyframeAfter == self.m_keyframes.begin())  {
-    // return the first keyframe state
-    rotation = (*iteratorCoreKeyframeAfter).getRotation();
-    translation = (*iteratorCoreKeyframeAfter).getTranslation();
+            return (translation.clone(), rotation.clone());
+        }
 
-    return true;
-  }
+        // get the keyframe before the requested one
+        let mut iteratorCoreKeyframeBefore = iteratorCoreKeyframeAfter;
+        iteratorCoreKeyframeBefore -= 1;
 
-  // get the keyframe before the requested one
-let  iteratorCoreKeyframeBefore = iteratorCoreKeyframeAfter;
-  --iteratorCoreKeyframeBefore;
+        // get the two keyframe pointers
 
-  // get the two keyframe pointers
-  CalCoreKeyframe *pCoreKeyframeBefore;
-  pCoreKeyframeBefore = *iteratorCoreKeyframeBefore;
-  CalCoreKeyframe *pCoreKeyframeAfter;
-  pCoreKeyframeAfter = *iteratorCoreKeyframeAfter;
+        let pCoreKeyframeBefore = &self.m_keyframes[iteratorCoreKeyframeBefore];
+        let pCoreKeyframeAfter = &self.m_keyframes[iteratorCoreKeyframeAfter];
 
-  // calculate the blending factor between the two keyframe states
-  float blendFactor;
-  blendFactor = (time - pCoreKeyframeBefore.getTime()) / (pCoreKeyframeAfter.getTime() - pCoreKeyframeBefore.getTime());
+        // calculate the blending factor between the two keyframe states
+        let blendFactor = (time - pCoreKeyframeBefore.getTime())
+            / (pCoreKeyframeAfter.getTime() - pCoreKeyframeBefore.getTime());
 
-  // blend between the two keyframes
-  translation = pCoreKeyframeBefore.getTranslation();
-  translation.blend(blendFactor, pCoreKeyframeAfter.getTranslation());
+        // blend between the two keyframes
+        let mut translation = pCoreKeyframeBefore.getTranslation().clone();
+        translation.blend(blendFactor, pCoreKeyframeAfter.getTranslation());
 
-  rotation = pCoreKeyframeBefore.getRotation();
-  rotation.blend(blendFactor, pCoreKeyframeAfter.getRotation());
+        let mut rotation = pCoreKeyframeBefore.getRotation().clone();
+        rotation.blend(blendFactor, pCoreKeyframeAfter.getRotation());
 
-  return true;
-}
+        return (translation.clone(), rotation.clone());
+    }
 
-// 555 cpp
-fn getUpperBound(&self,  time: f32) -> usize {
+    // 555 cpp
+    fn getUpperBound(&self, time: f32) -> usize {
+        let mut lowerBound = 0;
+        let mut upperBound = self.m_keyframes.len() - 1;
+        //static int aa = 0;
 
-  let lowerBound = 0;
-  let upperBound = self.m_keyframes.len()-1;
-	//static int aa = 0;
+        //upperBound += aa;
+        //upperBound %= m_keyframes.size();
+        //aa++;
+        //time = m_keyframes[upperBound]->getTime();
 
-	//upperBound += aa;
-	//upperBound %= m_keyframes.size();
-	//aa++;
-	//time = m_keyframes[upperBound]->getTime();
+        while lowerBound < upperBound - 1 {
+            let middle = (lowerBound + upperBound) / 2;
 
-  while(lowerBound<upperBound-1)  {
-	  let middle = (lowerBound+upperBound)/2;
+            if time >= self.m_keyframes[middle].getTime() {
+                lowerBound = middle;
+            } else {
+                upperBound = middle;
+            }
+            //break;
+        }
 
-	  if time >= self.m_keyframes[middle].getTime()	  {
-		  lowerBound=middle;
-	  } else	  {
-		  upperBound=middle;
-	  }
-		//break;
-  }
-
-  return self.m_keyframes.begin() + upperBound;
-
-}
+        return upperBound;
+    }
 
     // 615 cpp
     pub fn getCoreKeyframeCount(&self) -> usize {

@@ -109,7 +109,10 @@ impl CalCoreBone {
             self.m_rotationAbsolute = self.m_rotation;
         } else {
             // get the parent bone
-            let pParent = self.m_pCoreSkeleton.borrow().getCoreBone(self.m_parentId);
+            let pParent = self
+                .m_pCoreSkeleton
+                .borrow()
+                .getCoreBone(self.m_parentId as usize);
 
             if pParent.is_some() {
                 // transform relative state with the absolute state of the parent
@@ -134,7 +137,10 @@ impl CalCoreBone {
         // calculate all child bones
 
         for iteratorChildId in self.m_listChildId.iter() {
-            let bone = self.m_pCoreSkeleton.borrow().getCoreBone(*iteratorChildId);
+            let bone = self
+                .m_pCoreSkeleton
+                .borrow()
+                .getCoreBone(*iteratorChildId as usize);
             if bone.is_some() {
                 bone.unwrap().borrow_mut().calculateState();
             } else {
