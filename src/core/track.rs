@@ -94,8 +94,8 @@ pub fn getState(&self, time: f32 /* , CalVector& translation, CalQuaternion& rot
   if(iteratorCoreKeyframeAfter == self.m_keyframes.end()) {
     // return the last keyframe state
     --iteratorCoreKeyframeAfter;
-    rotation = (*iteratorCoreKeyframeAfter)->getRotation();
-    translation = (*iteratorCoreKeyframeAfter)->getTranslation();
+    rotation = (*iteratorCoreKeyframeAfter).getRotation();
+    translation = (*iteratorCoreKeyframeAfter).getTranslation();
 
     return true;
   }
@@ -103,8 +103,8 @@ pub fn getState(&self, time: f32 /* , CalVector& translation, CalQuaternion& rot
   // check if the time is before the first keyframe
   if(iteratorCoreKeyframeAfter == self.m_keyframes.begin())  {
     // return the first keyframe state
-    rotation = (*iteratorCoreKeyframeAfter)->getRotation();
-    translation = (*iteratorCoreKeyframeAfter)->getTranslation();
+    rotation = (*iteratorCoreKeyframeAfter).getRotation();
+    translation = (*iteratorCoreKeyframeAfter).getTranslation();
 
     return true;
   }
@@ -121,16 +121,43 @@ let  iteratorCoreKeyframeBefore = iteratorCoreKeyframeAfter;
 
   // calculate the blending factor between the two keyframe states
   float blendFactor;
-  blendFactor = (time - pCoreKeyframeBefore->getTime()) / (pCoreKeyframeAfter->getTime() - pCoreKeyframeBefore->getTime());
+  blendFactor = (time - pCoreKeyframeBefore.getTime()) / (pCoreKeyframeAfter.getTime() - pCoreKeyframeBefore.getTime());
 
   // blend between the two keyframes
-  translation = pCoreKeyframeBefore->getTranslation();
-  translation.blend(blendFactor, pCoreKeyframeAfter->getTranslation());
+  translation = pCoreKeyframeBefore.getTranslation();
+  translation.blend(blendFactor, pCoreKeyframeAfter.getTranslation());
 
-  rotation = pCoreKeyframeBefore->getRotation();
-  rotation.blend(blendFactor, pCoreKeyframeAfter->getRotation());
+  rotation = pCoreKeyframeBefore.getRotation();
+  rotation.blend(blendFactor, pCoreKeyframeAfter.getRotation());
 
   return true;
+}
+
+// 555 cpp
+fn getUpperBound(&self,  time: f32) -> usize {
+
+  let lowerBound = 0;
+  let upperBound = self.m_keyframes.len()-1;
+	//static int aa = 0;
+
+	//upperBound += aa;
+	//upperBound %= m_keyframes.size();
+	//aa++;
+	//time = m_keyframes[upperBound]->getTime();
+
+  while(lowerBound<upperBound-1)  {
+	  let middle = (lowerBound+upperBound)/2;
+
+	  if time >= self.m_keyframes[middle].getTime()	  {
+		  lowerBound=middle;
+	  } else	  {
+		  upperBound=middle;
+	  }
+		//break;
+  }
+
+  return self.m_keyframes.begin() + upperBound;
+
 }
 
     // 615 cpp
