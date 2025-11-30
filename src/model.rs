@@ -5,6 +5,7 @@ use crate::CalMixerTrait;
 use crate::CalMorphTargetMixer;
 use crate::CalPhysique;
 use crate::CalRenderer;
+use crate::CalSkeleton;
 use crate::CalSpringSystem;
 use crate::core::CalCoreModel;
 use std::{cell::RefCell, rc::Rc};
@@ -16,7 +17,7 @@ pub enum ModelError {
 
 pub struct CalModel {
     m_pCoreModel: Rc<RefCell<CalCoreModel>>,
-    // CalSkeleton           *m_pSkeleton;
+    m_pSkeleton: Rc<RefCell<CalSkeleton>>,
     m_pMixer: CalAbstractMixer,
     m_pMorphTargetMixer: Option<CalMorphTargetMixer>,
     m_pPhysique: Option<CalPhysique>,
@@ -30,8 +31,10 @@ pub struct CalModel {
 
 impl CalModel {
     pub fn new(core_model: Rc<RefCell<CalCoreModel>>) -> Self {
+        let skeleton = core_model.borrow().getCoreSkeleton().clone();
         CalModel {
             m_pCoreModel: core_model,
+            m_pSkeleton: Rc::new(RefCell::new(CalSkeleton::new(skeleton))),
             m_pMixer: CalAbstractMixer::None,
             m_pMorphTargetMixer: None,
             m_pPhysique: None,

@@ -305,7 +305,135 @@ impl CalMixerTrait for CalMixer {
         }
     }
 
+    // 1035 cpp
     fn updateSkeleton(&self) {
+        // get the skeleton we need to update
+        let pSkeleton = self.m_pModel.borrow().getSkeleton();
+        if (pSkeleton == 0) {
+            return;
+        }
+
+        // clear the skeleton state
+        pSkeleton.clearState();
+
+        // get the bone vector of the skeleton
+        let vectorBone = pSkeleton.getVectorBone();
+
+        // For each bone, reset the transform-related variables to the core (bind pose) bone position and orientation.
+        let curIter = vectorBone.begin();
+        let endIter = vectorBone.end();
+        for curIter in vectorBone.iter() {
+            (*curIter).setCoreTransformStateVariables();
+        }
+
+        // The bone adjustments are "replace" so they have to go first, giving them
+        // highest priority and full influence.  Subsequent animations affecting the same bones,
+        // including subsequent replace animations, will have their incluence attenuated appropriately.
+        applyBoneAdjustments();
+
+        // loop through all animation actions
+        let pAction;
+        for iteratorAnimationAction in m_listAnimationAction.iter() {
+            pAction = *iteratorAnimationAction;
+            if (pAction.isOn()) {
+                // get the core animation instance
+                let pCoreAnimation = pAction.getCoreAnimation();
+
+                // get the list of core tracks of above core animation
+                let listCoreTrack = pCoreAnimation.getListCoreTrack();
+
+                // loop through all core tracks of the core animation
+                let pTrack;
+                for iteratorCoreTrack in listCoreTrack.iter() {
+                    pTrack = *iteratorCoreTrack;
+
+                    // get the appropriate bone of the track
+                    let pBone = vectorBone[pTrack.getCoreBoneId()];
+
+                    // get the current translation and rotation
+                    // CalVector translation;
+                    // CalQuaternion rotation;
+                    pTrack.getState(pAction.getTime(), translation, rotation);
+
+                    // Replace and CrossFade both blend with the replace function.
+                    let compFunc = pAction.getCompositionFunction();
+                    let replace = compFunc != CalAnimation::CompositionFunctionAverage
+                        && compFunc != CalAnimation::CompositionFunctionNull;
+                    let scale = pAction.getScale();
+
+                    let absoluteTrans = pTrack.getTranslationRequired();
+                    pBone.blendState(
+                        pAction.getWeight(),
+                        translation,
+                        rotation,
+                        scale,
+                        replace,
+                        pAction.getRampValue(),
+                        absoluteTrans,
+                    );
+                }
+            }
+        }
+
+        // lock the skeleton state
+        pSkeleton.lockState();
+
+        // loop through all animation cycles
+        let pAnimCycle;
+        for iteratorAnimationCycle in m_listAnimationCycle.iter() {
+            pAnimCycle = *iteratorAnimationCycle;
+
+            // get the core animation instance
+            let pCoreAnimation = pAnimCycle.getCoreAnimation();
+
+            // calculate adjusted time
+            let animationTime;
+            if (pAnimCycle.getState() == CalAnimation::STATE_SYNC) {
+                if (m_animationDuration == 0.0) {
+                    animationTime = 0.0;
+                } else {
+                    animationTime =
+                        m_animationTime * pCoreAnimation.getDuration() / m_animationDuration;
+                }
+            } else {
+                animationTime = pAnimCycle.getTime();
+            }
+
+            // get the list of core tracks of above core animation
+            let listCoreTrack = pCoreAnimation.getListCoreTrack();
+
+            // loop through all core tracks of the core animation
+            let pTrack;
+            for iteratorCoreTrack in listCoreTrack.iter() {
+                pTrack = *iteratorCoreTrack;
+
+                // get the appropriate bone of the track
+                let pBone = vectorBone[pTrack.getCoreBoneId()];
+
+                // get the current translation and rotation
+                // CalVector translation;
+                // CalQuaternion rotation;
+                pTrack.getState(animationTime, translation, rotation);
+
+                // blend the bone state with the new state
+                let absoluteTrans = pTrack.getTranslationRequired();
+                pBone.blendState(
+                    pAnimCycle.getWeight(),
+                    translation,
+                    rotation,
+                    1.0,
+                    false,
+                    1.0,
+                    absoluteTrans,
+                );
+            }
+        }
+
+        // lock the skeleton state
+        pSkeleton.lockState();
+
+        // let the skeleton calculate its final state
+        pSkeleton.calculateState();
         todo!();
     }
 }

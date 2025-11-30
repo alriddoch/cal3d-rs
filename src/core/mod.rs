@@ -19,4 +19,5 @@ pub use keyframe::CalCoreKeyframe;
 pub use loader::*;
 pub use mesh::CalCoreMesh;
 pub use model::*;
+pub use skeleton::CalCoreSkeleton;
 pub use submesh::CalCoreSubmesh;
