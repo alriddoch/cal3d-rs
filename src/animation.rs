@@ -87,6 +87,10 @@ impl CalAnimationAction {
         }
     }
 
+    pub fn getCoreAnimation(&self) -> &Rc<RefCell<CalCoreAnimation>> {
+        &self.m_pCoreAnimation
+    }
+
     pub fn getState(&self) -> &State {
         &self.m_state
     }
@@ -97,6 +101,21 @@ impl CalAnimationAction {
 
     pub fn getWeight(&self) -> f32 {
         self.m_weight
+    }
+
+    // 115 cpp
+    /*****************************************************************************/
+    /** Tells you whether the animation action is on, i.e., should it apply to bones.
+     *
+     * Tells you whether the animation action is on, i.e., should it apply to bones.
+     * All actions are on unless they are both manual and explicitly turned off.
+     *
+     * @return One of the following values:
+     *         \li \b true if successful
+     *         \li \b false if an error happend
+     *****************************************************************************/
+    pub fn isOn(&self) -> bool {
+        !matches!(self.m_sequencingMode, SequencingMode::SequencingModeManual) || self.m_manualOn
     }
 
     // 290 cpp

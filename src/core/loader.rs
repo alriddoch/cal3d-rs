@@ -1095,6 +1095,8 @@ pub fn loadCoreTrack(
         )));
     }
 
+    let core_bone_id = core_bone_id as usize;
+
     // allocate a new core track instance
 
     let skel = skeleton.borrow();

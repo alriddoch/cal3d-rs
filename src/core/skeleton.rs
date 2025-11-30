@@ -13,10 +13,8 @@ pub struct CalCoreSkeleton {
 }
 
 impl CalCoreSkeleton {
-    pub fn getCoreBone(&self, coreBoneId: i32) -> Option<Rc<RefCell<CalCoreBone>>> {
-        self.m_vectorCoreBone
-            .get(coreBoneId as usize)
-            .map(|b| b.clone())
+    pub fn getCoreBone(&self, coreBoneId: usize) -> Option<Rc<RefCell<CalCoreBone>>> {
+        self.m_vectorCoreBone.get(coreBoneId).map(|b| b.clone())
     }
 
     //43

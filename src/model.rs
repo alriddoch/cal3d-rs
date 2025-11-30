@@ -45,6 +45,10 @@ impl CalModel {
         }
     }
 
+    pub fn getSkeleton(&self) -> &Rc<RefCell<CalSkeleton>> {
+        &self.m_pSkeleton
+    }
+
     pub fn set_mixer(&mut self, mixer: CalMixer) {
         self.m_pMixer = CalAbstractMixer::CalMixer(mixer)
     }

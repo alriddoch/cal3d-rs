@@ -16,4 +16,23 @@ impl CalSkeleton {
             m_isBoundingBoxesComputed: false,
         }
     }
+
+    pub fn getVectorBone(&self) -> &Vec<CalBone> {
+        &self.m_vectorBone
+    }
+
+    // 98 cpp
+    /*****************************************************************************/
+    /** Clears the state of the skeleton instance.
+     *
+     * This function clears the state of the skeleton instance by recursively
+     * clearing the states of its bones.
+     *****************************************************************************/
+    pub fn clearState(&mut self) {
+        // clear all bone states of the skeleton
+        for iteratorBone in self.m_vectorBone.iter_mut() {
+            iteratorBone.clearState();
+        }
+        self.m_isBoundingBoxesComputed = false;
+    }
 }

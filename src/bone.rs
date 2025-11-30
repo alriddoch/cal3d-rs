@@ -22,3 +22,20 @@ pub struct CalBone {
     m_transformMatrix: Matrix3<f32>,
     m_boundingBox: BoundingBox,
 }
+
+impl CalBone {
+    // 328
+    /*****************************************************************************/
+    /** Clears the current state.
+     *
+     * This function clears the current state (absolute translation and rotation)
+     * of the bone instance and all its children.
+     *****************************************************************************/
+    pub fn clearState(&mut self) {
+        self.m_accumulatedWeight = 0.0;
+        self.m_accumulatedWeightAbsolute = 0.0;
+        self.m_accumulatedReplacementAttenuation = 1.0;
+        self.m_firstBlendScale = 1.0;
+        self.m_meshScaleAbsolute = CalVector::<f32>::new(1.0, 1.0, 1.0);
+    }
+}

@@ -309,51 +309,41 @@ impl CalMixerTrait for CalMixer {
     fn updateSkeleton(&self) {
         // get the skeleton we need to update
         let pSkeleton = self.m_pModel.borrow().getSkeleton();
-        if (pSkeleton == 0) {
-            return;
-        }
 
         // clear the skeleton state
-        pSkeleton.clearState();
+        pSkeleton.borrow().clearState();
 
         // get the bone vector of the skeleton
-        let vectorBone = pSkeleton.getVectorBone();
+        let vectorBone = pSkeleton.borrow().getVectorBone();
 
         // For each bone, reset the transform-related variables to the core (bind pose) bone position and orientation.
-        let curIter = vectorBone.begin();
-        let endIter = vectorBone.end();
-        for curIter in vectorBone.iter() {
-            (*curIter).setCoreTransformStateVariables();
+        for bone in vectorBone.iter_mut() {
+            bone.setCoreTransformStateVariables();
         }
 
         // The bone adjustments are "replace" so they have to go first, giving them
         // highest priority and full influence.  Subsequent animations affecting the same bones,
         // including subsequent replace animations, will have their incluence attenuated appropriately.
-        applyBoneAdjustments();
+        self.applyBoneAdjustments();
 
         // loop through all animation actions
-        let pAction;
-        for iteratorAnimationAction in m_listAnimationAction.iter() {
-            pAction = *iteratorAnimationAction;
-            if (pAction.isOn()) {
+        for pAction in self.m_listAnimationAction.iter() {
+            if pAction.borrow().isOn() {
                 // get the core animation instance
-                let pCoreAnimation = pAction.getCoreAnimation();
+                let pCoreAnimation = pAction.borrow().getCoreAnimation();
 
                 // get the list of core tracks of above core animation
-                let listCoreTrack = pCoreAnimation.getListCoreTrack();
+                let listCoreTrack = pCoreAnimation.borrow().getListCoreTrack();
 
                 // loop through all core tracks of the core animation
-                let pTrack;
-                for iteratorCoreTrack in listCoreTrack.iter() {
-                    pTrack = *iteratorCoreTrack;
-
+                for pTrack in listCoreTrack.iter() {
                     // get the appropriate bone of the track
-                    let pBone = vectorBone[pTrack.getCoreBoneId()];
+                    let pBone = vectorBone[pTrack.borrow().getCoreBoneId()];
 
                     // get the current translation and rotation
                     // CalVector translation;
                     // CalQuaternion rotation;
-                    pTrack.getState(pAction.getTime(), translation, rotation);
+                    pTrack.getState(pAction.borrow().getTime(), translation, rotation);
 
                     // Replace and CrossFade both blend with the replace function.
                     let compFunc = pAction.getCompositionFunction();
@@ -380,7 +370,7 @@ impl CalMixerTrait for CalMixer {
 
         // loop through all animation cycles
         let pAnimCycle;
-        for iteratorAnimationCycle in m_listAnimationCycle.iter() {
+        for iteratorAnimationCycle in self.m_listAnimationCycle.iter() {
             pAnimCycle = *iteratorAnimationCycle;
 
             // get the core animation instance
@@ -389,11 +379,11 @@ impl CalMixerTrait for CalMixer {
             // calculate adjusted time
             let animationTime;
             if (pAnimCycle.getState() == CalAnimation::STATE_SYNC) {
-                if (m_animationDuration == 0.0) {
+                if (self.m_animationDuration == 0.0) {
                     animationTime = 0.0;
                 } else {
-                    animationTime =
-                        m_animationTime * pCoreAnimation.getDuration() / m_animationDuration;
+                    animationTime = self.m_animationTime * pCoreAnimation.getDuration()
+                        / self.m_animationDuration;
                 }
             } else {
                 animationTime = pAnimCycle.getTime();
