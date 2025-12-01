@@ -103,6 +103,14 @@ impl CalAnimationAction {
         self.m_weight
     }
 
+    pub fn getScale(&self) -> f32 {
+        self.m_scale
+    }
+
+    pub fn getRampValue(&self) -> f32 {
+        self.m_rampValue
+    }
+
     // 115 cpp
     /*****************************************************************************/
     /** Tells you whether the animation action is on, i.e., should it apply to bones.
@@ -116,6 +124,18 @@ impl CalAnimationAction {
      *****************************************************************************/
     pub fn isOn(&self) -> bool {
         !matches!(self.m_sequencingMode, SequencingMode::SequencingModeManual) || self.m_manualOn
+    }
+
+    // 190 cpp
+    /*****************************************************************************/
+    /** Gets the CompositionFunction of the animation.
+     *
+     * Gets the CompositionFunction of the animation.  See setRampValue().
+     *
+     * @return \li \b CompositionFunction value that was set with setCompositionFunction().
+     *****************************************************************************/
+    pub fn getCompositionFunction(&self) -> &CompositionFunction {
+        return &self.m_compositionFunction;
     }
 
     // 290 cpp

@@ -42,6 +42,10 @@ impl CalCoreTrack {
         self.m_coreBoneId
     }
 
+    pub fn getTranslationRequired(&self) -> bool {
+        self.m_translationRequired
+    }
+
     // 73
     pub fn addCoreKeyframe(&mut self, pCoreKeyframe: CalCoreKeyframe) -> bool {
         self.m_keyframes.push(Rc::new(pCoreKeyframe));

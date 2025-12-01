@@ -31,10 +31,12 @@ pub struct CalModel {
 
 impl CalModel {
     pub fn new(core_model: Rc<RefCell<CalCoreModel>>) -> Self {
-        let skeleton = core_model.borrow().getCoreSkeleton().clone();
+        let core_skeleton = core_model.borrow().getCoreSkeleton().clone();
+        let skeleton = Rc::new(RefCell::new(CalSkeleton::new(core_skeleton)));
+        skeleton.borrow_mut().set_bone_skeleton(&skeleton);
         CalModel {
             m_pCoreModel: core_model,
-            m_pSkeleton: Rc::new(RefCell::new(CalSkeleton::new(skeleton))),
+            m_pSkeleton: skeleton,
             m_pMixer: CalAbstractMixer::None,
             m_pMorphTargetMixer: None,
             m_pPhysique: None,

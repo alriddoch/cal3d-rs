@@ -1,4 +1,5 @@
 use crate::CalModel;
+use crate::animation::CompositionFunction;
 use crate::core::{CalCoreAnimation, CalCoreKeyframe};
 use crate::{CalAnimation, CalAnimationAction, CalAnimationCycle};
 use crate::{CalQuaternion, CalVector};
@@ -225,15 +226,19 @@ impl CalMixer {
 
     // 946 cpp
     fn applyBoneAdjustments(&mut self) {
-        let pSkeleton = self.m_pModel.borrow().getSkeleton();
-        let vectorBone = pSkeleton.borrow().getVectorBone();
+        let pModel = self.m_pModel.borrow();
+        let pSkeleton = pModel.getSkeleton();
+        let skeleton = pSkeleton.borrow();
+        let vectorBone = skeleton.getVectorBone();
         for i in 0..self.m_numBoneAdjustments {
             let ba = &self.m_boneAdjustmentAndBoneIdArray[i];
-            let bo = vectorBone[ba.boneId_];
-            let cbo = bo.getCoreBone();
+            let bo_ref = &vectorBone[ba.boneId_];
+            let mut bone = bo_ref.borrow_mut();
+
             if ba.boneAdjustment_.flags_ & FlagMeshScale == FlagMeshScale {
-                bo.setMeshScaleAbsolute(ba.boneAdjustment_.meshScaleAbsolute_);
+                bone.setMeshScaleAbsolute(&ba.boneAdjustment_.meshScaleAbsolute_);
             }
+            let cbo = bone.getCoreBone();
             if ba.boneAdjustment_.flags_ & FlagPosRot == FlagPosRot {
                 let localPos = cbo.getTranslation();
                 let adjustedLocalPos = *localPos;
@@ -242,10 +247,10 @@ impl CalMixer {
                 let rampValue = ba.boneAdjustment_.rampValue_;
                 let replace = true;
                 let unrampedWeight = 1.0;
-                bo.blendState(
+                bone.blendState(
                     unrampedWeight,
-                    adjustedLocalPos,
-                    adjustedLocalOri,
+                    &adjustedLocalPos,
+                    &adjustedLocalOri,
                     scale,
                     replace,
                     rampValue,
@@ -394,7 +399,7 @@ impl CalMixerTrait for CalMixer {
 
         // For each bone, reset the transform-related variables to the core (bind pose) bone position and orientation.
         for bone in vectorBone.iter_mut() {
-            bone.setCoreTransformStateVariables();
+            bone.borrow_mut().setCoreTransformStateVariables();
         }
 
         // The bone adjustments are "replace" so they have to go first, giving them
@@ -423,19 +428,22 @@ impl CalMixerTrait for CalMixer {
                         pTrack.borrow().getState(pAction.borrow().getTime());
 
                     // Replace and CrossFade both blend with the replace function.
-                    let compFunc = pAction.getCompositionFunction();
-                    let replace = compFunc != CalAnimation::CompositionFunctionAverage
-                        && compFunc != CalAnimation::CompositionFunctionNull;
-                    let scale = pAction.getScale();
+                    let compFunc = pAction.borrow().getCompositionFunction();
+                    let replace =
+                        !matches!(compFunc, CompositionFunction::CompositionFunctionAverage)
+                            && !matches!(compFunc, CompositionFunction::CompositionFunctionNull);
+                    let action = pAction.borrow();
+                    let scale = action.getScale();
 
-                    let absoluteTrans = pTrack.getTranslationRequired();
-                    pBone.blendState(
-                        pAction.getWeight(),
-                        translation,
-                        rotation,
+                    let track = pTrack.borrow();
+                    let absoluteTrans = track.getTranslationRequired();
+                    pBone.borrow_mut().blendState(
+                        action.getWeight(),
+                        &translation,
+                        &rotation,
                         scale,
                         replace,
-                        pAction.getRampValue(),
+                        action.getRampValue(),
                         absoluteTrans,
                     );
                 }
@@ -443,36 +451,37 @@ impl CalMixerTrait for CalMixer {
         }
 
         // lock the skeleton state
-        pSkeleton.lockState();
+        pSkeleton.borrow_mut().lockState();
 
         // loop through all animation cycles
         let pAnimCycle;
         for iteratorAnimationCycle in self.m_listAnimationCycle.iter() {
-            pAnimCycle = *iteratorAnimationCycle;
+            let pAnimCycle = iteratorAnimationCycle.borrow();
 
             // get the core animation instance
             let pCoreAnimation = pAnimCycle.getCoreAnimation();
 
             // calculate adjusted time
             let animationTime;
-            if (pAnimCycle.getState() == CalAnimation::STATE_SYNC) {
-                if (self.m_animationDuration == 0.0) {
+            if matches!(pAnimCycle.getState(), crate::animation::State::STATE_SYNC) {
+                if self.m_animationDuration == 0.0 {
                     animationTime = 0.0;
                 } else {
-                    animationTime = self.m_animationTime * pCoreAnimation.getDuration()
+                    animationTime = self.m_animationTime * pCoreAnimation.borrow().getDuration()
                         / self.m_animationDuration;
                 }
             } else {
                 animationTime = pAnimCycle.getTime();
             }
 
+            let core_animation = pCoreAnimation.borrow();
             // get the list of core tracks of above core animation
-            let listCoreTrack = pCoreAnimation.getListCoreTrack();
+            let listCoreTrack = core_animation.getListCoreTrack();
 
             // loop through all core tracks of the core animation
             let pTrack;
             for iteratorCoreTrack in listCoreTrack.iter() {
-                pTrack = *iteratorCoreTrack;
+                pTrack = iteratorCoreTrack.borrow();
 
                 // get the appropriate bone of the track
                 let pBone = vectorBone[pTrack.getCoreBoneId()];
@@ -480,14 +489,14 @@ impl CalMixerTrait for CalMixer {
                 // get the current translation and rotation
                 // CalVector translation;
                 // CalQuaternion rotation;
-                pTrack.getState(animationTime, translation, rotation);
+                let (translation, rotation) = pTrack.getState(animationTime);
 
                 // blend the bone state with the new state
                 let absoluteTrans = pTrack.getTranslationRequired();
-                pBone.blendState(
+                pBone.borrow_mut().blendState(
                     pAnimCycle.getWeight(),
-                    translation,
-                    rotation,
+                    &translation,
+                    &rotation,
                     1.0,
                     false,
                     1.0,
@@ -497,10 +506,10 @@ impl CalMixerTrait for CalMixer {
         }
 
         // lock the skeleton state
-        pSkeleton.lockState();
+        pSkeleton.borrow_mut().lockState();
 
         // let the skeleton calculate its final state
-        pSkeleton.calculateState();
+        pSkeleton.borrow_mut().calculateState();
         todo!();
     }
 }
