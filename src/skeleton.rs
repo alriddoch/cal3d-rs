@@ -16,13 +16,13 @@ impl CalSkeleton {
         let mut vectorBone = Vec::with_capacity(vectorCoreBone.len());
 
         for core_bone in vectorCoreBone.iter() {
-            let bone = CalBone::new(core_bone);
+            let bone = Rc::new(RefCell::new(CalBone::new(core_bone)));
             vectorBone.push(bone);
         }
         drop(skeleton);
         Self {
             m_pCoreSkeleton: core_skeleton.clone(),
-            m_vectorBone: Vec::new(),
+            m_vectorBone: vectorBone,
             m_isBoundingBoxesComputed: false,
         }
     }
