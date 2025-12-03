@@ -482,7 +482,7 @@ fn loadCoreSkeletonFromSource(
     }
 
     let mut skeleton = skel.borrow_mut();
-    for bone_id in 0..bone_count {
+    for bone_id in 0..bone_count as usize {
         let bone = loadCoreBones(dataSrc, version, skel.clone())?;
 
         skeleton.addCoreBone(bone.clone());

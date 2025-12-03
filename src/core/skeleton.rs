@@ -8,8 +8,8 @@ use super::bone::CalCoreBone;
 #[derive(Default)]
 pub struct CalCoreSkeleton {
     m_vectorCoreBone: Vec<Rc<RefCell<CalCoreBone>>>,
-    m_mapCoreBoneNames: BTreeMap<String, i32>,
-    m_vectorRootCoreBoneId: Vec<i32>,
+    m_mapCoreBoneNames: BTreeMap<String, usize>,
+    m_vectorRootCoreBoneId: Vec<usize>,
 }
 
 impl CalCoreSkeleton {
@@ -19,6 +19,10 @@ impl CalCoreSkeleton {
 
     pub fn getCoreBone(&self, coreBoneId: usize) -> Option<Rc<RefCell<CalCoreBone>>> {
         self.m_vectorCoreBone.get(coreBoneId).map(|b| b.clone())
+    }
+
+    pub fn getVectorRootCoreBoneId(&self) -> &Vec<usize> {
+        &self.m_vectorRootCoreBoneId
     }
 
     //43
@@ -33,8 +37,8 @@ impl CalCoreSkeleton {
      *         \li the assigned bone \b ID of the added core bone
      *         \li \b -1 if an error happened
      *****************************************************************************/
-    pub fn addCoreBone(&mut self, bone: Rc<RefCell<CalCoreBone>>) -> i32 {
-        let boneId = self.m_vectorCoreBone.len() as i32;
+    pub fn addCoreBone(&mut self, bone: Rc<RefCell<CalCoreBone>>) -> usize {
+        let boneId = self.m_vectorCoreBone.len();
 
         // if necessary, add the core bone to the root bone list
         if bone.borrow().getParentId() == -1 {
@@ -83,11 +87,11 @@ impl CalCoreSkeleton {
      *****************************************************************************/
     pub fn mapCoreBoneName(
         &mut self,
-        coreBoneId: i32,
+        coreBoneId: usize,
         strName: &str,
     ) -> Result<(), super::CoreError> {
         //Make sure the ID given is a valid corebone ID number
-        if (coreBoneId < 0) || (coreBoneId >= self.m_vectorCoreBone.len() as i32) {
+        if (coreBoneId < 0) || (coreBoneId >= self.m_vectorCoreBone.len()) {
             return Err(super::CoreError::OtherError(format!(
                 "Bone id {coreBoneId} outside range 0..{}",
                 self.m_vectorCoreBone.len()
@@ -109,7 +113,6 @@ impl CalCoreSkeleton {
      *
      * @param pCoreModel The coreModel (needed for vertices data).
      *****************************************************************************/
-
     pub fn calculateBoundingBoxes(&self, pCoreModel: &Rc<RefCell<crate::core::CalCoreModel>>) {
         // First, find out whether all the bounding boxes have already been precomputed.
         // If so, we can bail out early.

@@ -66,6 +66,10 @@ impl CalCoreBone {
         self.m_parentId
     }
 
+    pub fn getListChildId(&self) -> &Vec<i32> {
+        &self.m_listChildId
+    }
+
     pub fn addChildId(&mut self, childId: i32) {
         self.m_listChildId.push(childId);
     }
@@ -84,6 +88,10 @@ impl CalCoreBone {
     /**return updated absoltue transaltion.**/
     pub fn getTranslationAbsolute(&self) -> &CalVector<f32> {
         &self.m_translationAbsolute
+    }
+
+    pub fn getRotationBoneSpace(&self) -> &CalQuaternion<f32> {
+        &self.m_rotationBoneSpace
     }
 
     pub fn isBoundingBoxPrecomputed(&self) -> bool {

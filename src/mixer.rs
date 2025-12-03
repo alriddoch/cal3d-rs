@@ -454,7 +454,6 @@ impl CalMixerTrait for CalMixer {
         pSkeleton.borrow_mut().lockState();
 
         // loop through all animation cycles
-        let pAnimCycle;
         for iteratorAnimationCycle in self.m_listAnimationCycle.iter() {
             let pAnimCycle = iteratorAnimationCycle.borrow();
 
@@ -479,12 +478,11 @@ impl CalMixerTrait for CalMixer {
             let listCoreTrack = core_animation.getListCoreTrack();
 
             // loop through all core tracks of the core animation
-            let pTrack;
             for iteratorCoreTrack in listCoreTrack.iter() {
-                pTrack = iteratorCoreTrack.borrow();
+                let pTrack = iteratorCoreTrack.borrow();
 
                 // get the appropriate bone of the track
-                let pBone = vectorBone[pTrack.getCoreBoneId()];
+                let pBone = &vectorBone[pTrack.getCoreBoneId()];
 
                 // get the current translation and rotation
                 // CalVector translation;

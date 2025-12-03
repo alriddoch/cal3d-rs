@@ -37,6 +37,25 @@ impl CalSkeleton {
         &self.m_vectorBone
     }
 
+    // 77 cpp
+    /*****************************************************************************/
+    /** Calculates the state of the skeleton instance.
+     *
+     * This function calculates the state of the skeleton instance by recursively
+     * calculating the states of its bones.
+     *****************************************************************************/
+    pub fn calculateState(&mut self) {
+        // calculate all bone states of the skeleton
+        let listRootCoreBoneId = self.m_pCoreSkeleton.borrow().getVectorRootCoreBoneId();
+
+        for iteratorRootBoneId in listRootCoreBoneId.iter() {
+            self.m_vectorBone[*iteratorRootBoneId]
+                .borrow_mut()
+                .calculateState();
+        }
+        self.m_isBoundingBoxesComputed = false;
+    }
+
     // 98 cpp
     /*****************************************************************************/
     /** Clears the state of the skeleton instance.

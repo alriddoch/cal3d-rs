@@ -72,7 +72,6 @@ impl CalBone {
      * @param rampValue Amount to attenuate weight when ramping in/out the animation.
      * @param absoluteTranslation If true, use the translation as absolute, otherwise add it to the current bone translation as relative.
      *****************************************************************************/
-
     pub fn blendState(
         &mut self,
         unrampedWeight: f32,
@@ -198,6 +197,153 @@ impl CalBone {
         }
         if replace {
             self.m_accumulatedReplacementAttenuation *= 1.0 - rampValue;
+        }
+    }
+
+    // 166 cpp
+    pub fn calculateState(&mut self) {
+        // check if the bone was not touched by any active animation
+        if self.m_accumulatedWeight == 0.0 {
+            // set the bone to the initial skeleton state
+            self.m_translation = *self.m_pCoreBone.borrow().getTranslation();
+            self.m_rotation = *self.m_pCoreBone.borrow().getRotation();
+        }
+
+        // get parent bone id
+        let parentId = self.m_pCoreBone.borrow().getParentId();
+
+        if parentId == -1 {
+            // no parent, this means absolute state == relative state
+            self.m_translationAbsolute = self.m_translation;
+            self.m_rotationAbsolute = self.m_rotation;
+        } else {
+            // get the parent bone
+            let pParent = self.m_pSkeleton.getBone(parentId);
+
+            // transform relative state with the absolute state of the parent
+            self.m_translationAbsolute = self.m_translation;
+            self.m_translationAbsolute *= pParent.getRotationAbsolute();
+            self.m_translationAbsolute += pParent.getTranslationAbsolute();
+
+            self.m_rotationAbsolute = self.m_rotation;
+            self.m_rotationAbsolute *= pParent.getRotationAbsolute();
+        }
+
+        // calculate the bone space transformation
+        self.m_translationBoneSpace = self.m_pCoreBone.getTranslationBoneSpace();
+
+        // Must go before the *= self.m_rotationAbsolute.
+        let meshScalingOn = if self.m_meshScaleAbsolute.x != 1.0
+            || self.m_meshScaleAbsolute.y != 1.0
+            || self.m_meshScaleAbsolute.z != 1.0
+        {
+            // CalVector scalevec;
+
+            // The mesh transformation is intended to apply to the vector from the
+            // bone node to the vert, relative to the model's global coordinate system.
+            // For example, even though the head node's X axis aims up, the model's
+            // global coordinate system has X to stage right, Z up, and Y stage back.
+            //
+            // The standard vert transformation is:
+            // v1 = vmesh - boneAbsPosInJpose
+            // v2 = v1 * boneAbsRotInAnimPose
+            // v3 = v2 + boneAbsPosInAnimPose
+            //
+            // Cal3d does the calculation by:
+            // u1 = umesh * transformMatrix
+            // u2 = u1 + translationBoneSpace
+            //
+            // where translationBoneSpace =
+            //   "coreBoneTranslationBoneSpace"
+            //   * boneAbsRotInAnimPose
+            //   + boneAbsPosInAnimPose
+            //
+            // and where transformMatrix =
+            //   "coreBoneRotBoneSpace"
+            //   * boneAbsRotInAnimPose
+            //
+            // I don't know what "coreBoneRotBoneSpace" and "coreBoneTranslationBoneSpace" actually are,
+            // but to add scale to the scandard vert transformation, I simply do:
+            //
+            // v3' = vmesh           * scalevec    * boneAbsRotInAnimPose
+            //   - boneAbsPosInJpose * scalevec    * boneAbsRotInAnimPose
+            //   + boneAbsPosInAnimPose
+            //
+            // Essentially, the boneAbsPosInJpose is just an extra vector added to
+            // each vertex that we want to subtract out.  We must transform the extra
+            // vector in exactly the same way we transform the vmesh.  Therefore if we scale the mesh, we
+            // must also scale the boneAbsPosInJpose.
+            //
+            // Expanding out the u2 equation, we have:
+            //
+            // u2 = umesh * "coreBoneRotBoneSpace"   * boneAbsRotInAnimPose
+            //   + "coreBoneTranslationBoneSpace"    * boneAbsRotInAnimPose
+            //   + boneAbsPosInAnimPose
+            //
+            // We assume that "coreBoneTranslationBoneSpace" = vectorThatMustBeSubtractedFromUmesh * "coreBoneRotBoneSpace":
+            //
+            // u2 = umesh * "coreBoneRotBoneSpace"                                 * boneAbsRotInAnimPose
+            //   + vectorThatMustBeSubtractedFromUmesh * "coreBoneRotBoneSpace"    * boneAbsRotInAnimPose
+            //   + boneAbsPosInAnimPose
+            //
+            // We assume that scale should be applied to umesh, not umesh * "coreBoneRotBoneSpace":
+            //
+            // u2 = umesh * scaleVec * "coreBoneRotBoneSpace" * boneAbsRotInAnimPose
+            //   + "coreBoneTranslationBoneSpace" * "coreBoneRotBoneSpaceInverse" * scaleVec * "coreBoneRotBoneSpace" * boneAbsRotInAnimPose
+            //   + boneAbsPosInAnimPose
+            //
+            // which yields,
+            //
+            // transformMatrix' =  scaleVec * "coreBoneRotBoneSpace" * boneAbsRotInAnimPose
+            //
+            // and,
+            //
+            // translationBoneSpace' =
+            //   coreBoneTranslationBoneSpace * "coreBoneRotBoneSpaceInverse" * scaleVec * "coreBoneRotBoneSpace"
+            //   * boneAbsRotInAnimPose
+            //   + boneAbsPosInAnimPose
+
+            let coreBoneRotBoneSpaceInverse = self.m_pCoreBone.getRotationBoneSpace();
+            coreBoneRotBoneSpaceInverse.invert();
+            self.m_translationBoneSpace *= coreBoneRotBoneSpaceInverse;
+            self.m_translationBoneSpace.x *= self.m_meshScaleAbsolute.x;
+            self.m_translationBoneSpace.y *= self.m_meshScaleAbsolute.y;
+            self.m_translationBoneSpace.z *= self.m_meshScaleAbsolute.z;
+            self.m_translationBoneSpace *= self.m_pCoreBone.getRotationBoneSpace();
+
+            true
+        } else {
+            false
+        };
+        self.m_translationBoneSpace *= self.m_rotationAbsolute;
+        self.m_translationBoneSpace += self.m_translationAbsolute;
+
+        self.m_rotationBoneSpace = *self.m_pCoreBone.borrow().getRotationBoneSpace();
+        self.m_rotationBoneSpace *= self.m_rotationAbsolute;
+
+        self.m_transformMatrix = self.m_pCoreBone.borrow().getRotationBoneSpace();
+        if meshScalingOn {
+            // By applying each scale component to the row, instead of the column, we
+            // are effectively making the scale apply prior to the rotationBoneSpace.
+            self.m_transformMatrix.x.x *= self.m_meshScaleAbsolute.x;
+            self.m_transformMatrix.y.x *= self.m_meshScaleAbsolute.x;
+            self.m_transformMatrix.z.x *= self.m_meshScaleAbsolute.x;
+
+            self.m_transformMatrix.x.y *= self.m_meshScaleAbsolute.y;
+            self.m_transformMatrix.y.y *= self.m_meshScaleAbsolute.y;
+            self.m_transformMatrix.z.y *= self.m_meshScaleAbsolute.y;
+
+            self.m_transformMatrix.x.z *= self.m_meshScaleAbsolute.z;
+            self.m_transformMatrix.y.z *= self.m_meshScaleAbsolute.z;
+            self.m_transformMatrix.z.z *= self.m_meshScaleAbsolute.z;
+        }
+        self.m_transformMatrix *= self.m_rotationAbsolute;
+
+        // calculate all child bones
+        //   int i = 0;
+        for iteratorChildId in self.m_pCoreBone.borrow().getListChildId().iter() {
+            CalBone * bo = self.m_pSkeleton.getBone(*iteratorChildId);
+            bo.calculateState();
         }
     }
 
