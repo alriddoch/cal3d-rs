@@ -45,8 +45,9 @@ impl CalSkeleton {
      * calculating the states of its bones.
      *****************************************************************************/
     pub fn calculateState(&mut self) {
+        let skeleton = self.m_pCoreSkeleton.borrow();
         // calculate all bone states of the skeleton
-        let listRootCoreBoneId = self.m_pCoreSkeleton.borrow().getVectorRootCoreBoneId();
+        let listRootCoreBoneId = skeleton.getVectorRootCoreBoneId();
 
         for iteratorRootBoneId in listRootCoreBoneId.iter() {
             self.m_vectorBone[*iteratorRootBoneId]

@@ -240,8 +240,7 @@ impl CalMixer {
             }
             let cbo = bone.getCoreBone();
             if ba.boneAdjustment_.flags_ & FlagPosRot == FlagPosRot {
-                let localPos = cbo.getTranslation();
-                let adjustedLocalPos = *localPos;
+                let adjustedLocalPos = *cbo.borrow().getTranslation();
                 let adjustedLocalOri = ba.boneAdjustment_.localOri_;
                 let scale = 1.0;
                 let rampValue = ba.boneAdjustment_.rampValue_;
