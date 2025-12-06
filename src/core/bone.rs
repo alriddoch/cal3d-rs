@@ -90,6 +90,10 @@ impl CalCoreBone {
         &self.m_translationAbsolute
     }
 
+    pub fn getTranslationBoneSpace(&self) -> &CalVector<f32> {
+        &self.m_translationBoneSpace
+    }
+
     pub fn getRotationBoneSpace(&self) -> &CalQuaternion<f32> {
         &self.m_rotationBoneSpace
     }

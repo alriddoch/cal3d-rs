@@ -27,6 +27,10 @@ impl CalSkeleton {
         }
     }
 
+    pub fn getBone(&self, id: usize) -> &Rc<RefCell<CalBone>> {
+        &self.m_vectorBone[id]
+    }
+
     pub fn set_bone_skeleton(&self, skeleton: &Rc<RefCell<CalSkeleton>>) {
         for bone in self.m_vectorBone.iter() {
             bone.borrow_mut().setSkeleton(skeleton);

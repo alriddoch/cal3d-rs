@@ -3,7 +3,9 @@ use crate::core::CalCoreBone;
 use crate::vector::blend::Blend;
 use crate::vector::bounding::BoundingBox;
 use crate::{CalQuaternion, CalVector};
+use cgmath::Rotation;
 use cgmath::{Matrix3, SquareMatrix};
+use std::ops::{Add, Mul};
 use std::{cell::RefCell, rc::Rc};
 
 pub struct CalBone {
@@ -47,6 +49,18 @@ impl CalBone {
 
     pub fn getCoreBone(&self) -> &Rc<RefCell<CalCoreBone>> {
         &self.m_pCoreBone
+    }
+
+    pub fn getTranslationAbsolute(&self) -> &CalVector<f32> {
+        &self.m_translationAbsolute
+    }
+
+    pub fn getRotationAbsolute(&self) -> &CalQuaternion<f32> {
+        &self.m_rotationAbsolute
+    }
+
+    pub fn getTranslationBoneSpace(&self) -> &CalVector<f32> {
+        &self.m_translationBoneSpace
     }
 
     pub fn setSkeleton(&mut self, skeleton: &Rc<RefCell<CalSkeleton>>) {
@@ -216,21 +230,30 @@ impl CalBone {
             // no parent, this means absolute state == relative state
             self.m_translationAbsolute = self.m_translation;
             self.m_rotationAbsolute = self.m_rotation;
-        } else {
+        } else if let Some(skeleton) = self.m_pSkeleton.as_ref().map(|p| p.borrow()) {
             // get the parent bone
-            let pParent = self.m_pSkeleton.getBone(parentId);
+            let pParent = skeleton.getBone(parentId as usize);
 
             // transform relative state with the absolute state of the parent
             self.m_translationAbsolute = self.m_translation;
-            self.m_translationAbsolute *= pParent.getRotationAbsolute();
-            self.m_translationAbsolute += pParent.getTranslationAbsolute();
+            self.m_translationAbsolute = pParent
+                .borrow()
+                .getRotationAbsolute()
+                .mul(self.m_translationAbsolute);
+            self.m_translationAbsolute = self
+                .m_translationAbsolute
+                .add(pParent.borrow().getTranslationAbsolute());
 
             self.m_rotationAbsolute = self.m_rotation;
-            self.m_rotationAbsolute *= pParent.getRotationAbsolute();
+            self.m_rotationAbsolute = self
+                .m_rotationAbsolute
+                .mul(pParent.borrow().getRotationAbsolute());
+        } else {
+            panic!("calculateState on Bone with no Skeleton");
         }
 
         // calculate the bone space transformation
-        self.m_translationBoneSpace = self.m_pCoreBone.getTranslationBoneSpace();
+        self.m_translationBoneSpace = *self.m_pCoreBone.borrow().getTranslationBoneSpace();
 
         // Must go before the *= self.m_rotationAbsolute.
         let meshScalingOn = if self.m_meshScaleAbsolute.x != 1.0
@@ -303,25 +326,30 @@ impl CalBone {
             //   * boneAbsRotInAnimPose
             //   + boneAbsPosInAnimPose
 
-            let coreBoneRotBoneSpaceInverse = self.m_pCoreBone.getRotationBoneSpace();
+            let coreBoneRotBoneSpaceInverse = *self.m_pCoreBone.borrow().getRotationBoneSpace();
             coreBoneRotBoneSpaceInverse.invert();
-            self.m_translationBoneSpace *= coreBoneRotBoneSpaceInverse;
+            self.m_translationBoneSpace =
+                coreBoneRotBoneSpaceInverse.mul(self.m_translationBoneSpace);
             self.m_translationBoneSpace.x *= self.m_meshScaleAbsolute.x;
             self.m_translationBoneSpace.y *= self.m_meshScaleAbsolute.y;
             self.m_translationBoneSpace.z *= self.m_meshScaleAbsolute.z;
-            self.m_translationBoneSpace *= self.m_pCoreBone.getRotationBoneSpace();
+            self.m_translationBoneSpace = self
+                .m_pCoreBone
+                .borrow()
+                .getRotationBoneSpace()
+                .mul(self.m_translationBoneSpace);
 
             true
         } else {
             false
         };
-        self.m_translationBoneSpace *= self.m_rotationAbsolute;
+        self.m_translationBoneSpace = self.m_rotationAbsolute.mul(self.m_translationBoneSpace);
         self.m_translationBoneSpace += self.m_translationAbsolute;
 
         self.m_rotationBoneSpace = *self.m_pCoreBone.borrow().getRotationBoneSpace();
-        self.m_rotationBoneSpace *= self.m_rotationAbsolute;
+        self.m_rotationBoneSpace = self.m_rotationBoneSpace.mul(self.m_rotationAbsolute);
 
-        self.m_transformMatrix = self.m_pCoreBone.borrow().getRotationBoneSpace();
+        self.m_transformMatrix = Matrix3::from(*self.m_pCoreBone.borrow().getRotationBoneSpace());
         if meshScalingOn {
             // By applying each scale component to the row, instead of the column, we
             // are effectively making the scale apply prior to the rotationBoneSpace.
@@ -337,13 +365,16 @@ impl CalBone {
             self.m_transformMatrix.y.z *= self.m_meshScaleAbsolute.z;
             self.m_transformMatrix.z.z *= self.m_meshScaleAbsolute.z;
         }
-        self.m_transformMatrix *= self.m_rotationAbsolute;
+        self.m_transformMatrix = self
+            .m_transformMatrix
+            .mul(Matrix3::from(self.m_rotationAbsolute));
 
         // calculate all child bones
         //   int i = 0;
         for iteratorChildId in self.m_pCoreBone.borrow().getListChildId().iter() {
-            CalBone * bo = self.m_pSkeleton.getBone(*iteratorChildId);
-            bo.calculateState();
+            let skeleton = self.m_pSkeleton.as_ref().unwrap().borrow();
+            let bo = skeleton.getBone(*iteratorChildId as usize);
+            bo.borrow_mut().calculateState();
         }
     }
 

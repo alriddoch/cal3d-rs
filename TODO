@@ -1,1 +1,4 @@
 Upgrade Model.calcoreSkeleton to be RefCell, so less if it's innards need to be RefCell?
+
+CHeck Bone::calculateState and blendState to make sure the Quaternion ops are in the right order.
+Maybe refer to the Go port?
