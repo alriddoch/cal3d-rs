@@ -225,7 +225,7 @@ impl CalMixer {
     }
 
     // 946 cpp
-    fn applyBoneAdjustments(&mut self) {
+    fn applyBoneAdjustments(&self) {
         let pModel = self.m_pModel.borrow();
         let pSkeleton = pModel.getSkeleton();
         let skeleton = pSkeleton.borrow();
@@ -387,17 +387,20 @@ impl CalMixerTrait for CalMixer {
 
     // 1035 cpp
     fn updateSkeleton(&self) {
+        let model = self.m_pModel.borrow();
         // get the skeleton we need to update
-        let pSkeleton = self.m_pModel.borrow().getSkeleton();
+        let pSkeleton = model.getSkeleton();
 
         // clear the skeleton state
-        pSkeleton.borrow().clearState();
+        pSkeleton.borrow_mut().clearState();
+
+        let skeleton = pSkeleton.borrow();
 
         // get the bone vector of the skeleton
-        let vectorBone = pSkeleton.borrow().getVectorBone();
+        let vectorBone = skeleton.getVectorBone();
 
         // For each bone, reset the transform-related variables to the core (bind pose) bone position and orientation.
-        for bone in vectorBone.iter_mut() {
+        for bone in vectorBone.iter() {
             bone.borrow_mut().setCoreTransformStateVariables();
         }
 
@@ -408,30 +411,31 @@ impl CalMixerTrait for CalMixer {
 
         // loop through all animation actions
         for pAction in self.m_listAnimationAction.iter() {
-            if pAction.borrow().isOn() {
+            let action = pAction.borrow();
+            if action.isOn() {
                 // get the core animation instance
-                let pCoreAnimation = pAction.borrow().getCoreAnimation();
+                let pCoreAnimation = action.getCoreAnimation();
 
+                let core_animation = pCoreAnimation.borrow();
                 // get the list of core tracks of above core animation
-                let listCoreTrack = pCoreAnimation.borrow().getListCoreTrack();
+                let listCoreTrack = core_animation.getListCoreTrack();
 
                 // loop through all core tracks of the core animation
                 for pTrack in listCoreTrack.iter() {
                     // get the appropriate bone of the track
-                    let pBone = vectorBone[pTrack.borrow().getCoreBoneId()];
+                    let pBone = &vectorBone[pTrack.borrow().getCoreBoneId()];
 
                     // get the current translation and rotation
                     // CalVector translation;
                     // CalQuaternion rotation;
-                    let (translation, rotation) =
-                        pTrack.borrow().getState(pAction.borrow().getTime());
+                    let (translation, rotation) = pTrack.borrow().getState(action.getTime());
 
                     // Replace and CrossFade both blend with the replace function.
-                    let compFunc = pAction.borrow().getCompositionFunction();
+                    let compFunc = action.getCompositionFunction();
                     let replace =
                         !matches!(compFunc, CompositionFunction::CompositionFunctionAverage)
                             && !matches!(compFunc, CompositionFunction::CompositionFunctionNull);
-                    let action = pAction.borrow();
+
                     let scale = action.getScale();
 
                     let track = pTrack.borrow();
