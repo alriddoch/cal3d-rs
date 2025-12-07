@@ -1,7 +1,7 @@
-use crate::CalModel;
 use crate::animation::CompositionFunction;
 use crate::core::{CalCoreAnimation, CalCoreKeyframe};
 use crate::{CalAnimation, CalAnimationAction, CalAnimationCycle};
+use crate::{CalModel, CalSkeleton};
 use crate::{CalQuaternion, CalVector};
 use std::ops::Deref;
 use std::{cell::RefCell, rc::Rc};
@@ -54,7 +54,7 @@ pub trait CalMixerTrait {
     	* the instance was set via CalModel::setAbstractMixer.
     	*
     	*****************************************************************************/
-    fn updateSkeleton(&self);
+    fn updateSkeleton(&self, model: &CalModel);
 }
 
 pub enum CalAbstractMixer {
@@ -76,9 +76,9 @@ impl CalMixerTrait for CalAbstractMixer {
             _ => {}
         }
     }
-    fn updateSkeleton(&self) {
+    fn updateSkeleton(&self, model: &CalModel) {
         match self {
-            CalAbstractMixer::CalMixer(mixer) => mixer.updateSkeleton(),
+            CalAbstractMixer::CalMixer(mixer) => mixer.updateSkeleton(model),
             _ => {}
         }
     }
@@ -128,7 +128,7 @@ pub struct CalMixer {
     m_boneAdjustmentAndBoneIdArray: [BoneAdjustmentAndBoneId; CalMixerBoneAdjustmentsMax],
     // virtual void applyBoneAdjustments();
     m_pModel: Rc<RefCell<CalModel>>,
-    /* std::vector<CalAnimation *> */ m_vectorAnimation: Vec<CalAnimation>,
+    m_vectorAnimation: Vec<CalAnimation>, /* std::vector<CalAnimation *> */
     m_listAnimationAction: Vec<Rc<RefCell<CalAnimationAction>>>,
     m_listAnimationCycle: Vec<Rc<RefCell<CalAnimationCycle>>>,
     m_animationTime: f32,
@@ -225,10 +225,7 @@ impl CalMixer {
     }
 
     // 946 cpp
-    fn applyBoneAdjustments(&self) {
-        let pModel = self.m_pModel.borrow();
-        let pSkeleton = pModel.getSkeleton();
-        let skeleton = pSkeleton.borrow();
+    fn applyBoneAdjustments(&self, skeleton: &CalSkeleton) {
         let vectorBone = skeleton.getVectorBone();
         for i in 0..self.m_numBoneAdjustments {
             let ba = &self.m_boneAdjustmentAndBoneIdArray[i];
@@ -386,15 +383,15 @@ impl CalMixerTrait for CalMixer {
     }
 
     // 1035 cpp
-    fn updateSkeleton(&self) {
-        let model = self.m_pModel.borrow();
+    // model is needed, although we have self.m_pModel, as it's already borrowed.
+    fn updateSkeleton(&self, model: &CalModel) {
         // get the skeleton we need to update
         let pSkeleton = model.getSkeleton();
 
         // clear the skeleton state
         pSkeleton.borrow_mut().clearState();
 
-        let skeleton = pSkeleton.borrow();
+        let mut skeleton = pSkeleton.borrow_mut();
 
         // get the bone vector of the skeleton
         let vectorBone = skeleton.getVectorBone();
@@ -407,7 +404,8 @@ impl CalMixerTrait for CalMixer {
         // The bone adjustments are "replace" so they have to go first, giving them
         // highest priority and full influence.  Subsequent animations affecting the same bones,
         // including subsequent replace animations, will have their incluence attenuated appropriately.
-        self.applyBoneAdjustments();
+        // We need to pass in skeleton reference, as it's already borrowed here.
+        self.applyBoneAdjustments(skeleton.deref());
 
         // loop through all animation actions
         for pAction in self.m_listAnimationAction.iter() {
@@ -454,7 +452,7 @@ impl CalMixerTrait for CalMixer {
         }
 
         // lock the skeleton state
-        pSkeleton.borrow_mut().lockState();
+        skeleton.lockState();
 
         // loop through all animation cycles
         for iteratorAnimationCycle in self.m_listAnimationCycle.iter() {
@@ -507,10 +505,9 @@ impl CalMixerTrait for CalMixer {
         }
 
         // lock the skeleton state
-        pSkeleton.borrow_mut().lockState();
+        skeleton.lockState();
 
         // let the skeleton calculate its final state
-        pSkeleton.borrow_mut().calculateState();
-        todo!();
+        skeleton.calculateState();
     }
 }

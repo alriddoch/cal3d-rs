@@ -197,7 +197,7 @@ impl CalModel {
      *****************************************************************************/
     pub fn update(&mut self, deltaTime: f32) {
         self.m_pMixer.updateAnimation(deltaTime);
-        self.m_pMixer.updateSkeleton();
+        self.m_pMixer.updateSkeleton(self);
         // m_pMorpher.update(...);
         self.m_pMorphTargetMixer.as_mut().and_then(|m| {
             m.update(deltaTime);

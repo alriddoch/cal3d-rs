@@ -84,7 +84,7 @@ impl CalSkeleton {
      * locking the states of its bones.
      *****************************************************************************/
 
-    pub fn lockState(&mut self) {
+    pub fn lockState(&self) {
         // lock all bone states of the skeleton
 
         for iteratorBone in self.m_vectorBone.iter() {
