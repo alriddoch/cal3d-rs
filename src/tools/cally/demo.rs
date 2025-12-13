@@ -124,12 +124,6 @@ pub struct Demo {
     fps_sprite: Sprite,
 }
 
-fn loadTexture(filename: &str) -> Result<u32> {
-    // TODO: Copy from elsewhere
-    // image::open(&Path::new(filename))
-    Ok(1)
-}
-
 const WINDOW_WIDTH: u32 = 640;
 const WINDOW_HEIGHT: u32 = 640;
 
