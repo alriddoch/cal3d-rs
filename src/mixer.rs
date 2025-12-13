@@ -224,6 +224,54 @@ impl CalMixer {
         return true;
     }
 
+    // 679 cpp
+    /*****************************************************************************/
+    /** Fades an animation cycle out.
+     *
+     * This function fades an animation cycle out in a given amount of time.
+     *
+     * @param id The ID of the animation cycle that should be faded out.
+     * @param delay The time in seconds until the the animation cycle is
+     *              completely removed.
+     *
+     * @return One of the following values:
+     *         \li \b true if successful
+     *         \li \b false if an error happened
+     *****************************************************************************/
+    pub fn clearCycle(&mut self, id: usize, delay: f32) -> bool {
+        // get the animation for the given id
+
+        let Some(pAnimation) = self.m_vectorAnimation.get(id) else {
+            // CalError::setLastError(CalError::INVALID_HANDLE, __FILE__, __LINE__);
+            return false;
+        };
+
+        match pAnimation {
+            CalAnimation::None => true,
+            CalAnimation::Cycle(cycle_ref) => {
+                let mut pAnimationCycle = cycle_ref.borrow_mut();
+
+                // set animation cycle to async state
+                pAnimationCycle.setAsync(self.m_animationTime, self.m_animationDuration);
+
+                // blend the animation cycle
+                pAnimationCycle.blend(0.0, delay);
+                pAnimationCycle.checkCallbacks(0.0, &self.m_pModel);
+
+                drop(pAnimationCycle);
+
+                // clear the animation cycle from the active vector
+                self.m_vectorAnimation.insert(id, CalAnimation::None);
+
+                true
+            }
+            _ => {
+                // CalError::setLastError(CalError::INVALID_ANIMATION_TYPE, __FILE__, __LINE__);
+                false
+            }
+        }
+    }
+
     // 946 cpp
     fn applyBoneAdjustments(&self, skeleton: &CalSkeleton) {
         let vectorBone = skeleton.getVectorBone();

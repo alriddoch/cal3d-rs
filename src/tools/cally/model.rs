@@ -283,96 +283,72 @@ impl Model {
         self.motionBlend[1] = pMotionBlend[1];
         self.motionBlend[2] = pMotionBlend[2];
 
-        todo!();
+        let Some(mut cal_model) = self.calModel.as_ref().map(|m| m.borrow_mut()) else {
+            panic!("Unable to get CalModel");
+            return;
+        };
+        let mixer = cal_model.getMixerMut().expect("CalModel has no mixer");
 
-        // self.calModel
-        //     .GetMixer()
-        //     .ClearCycle(self.animationId[STATE_IDLE], delay);
-        // self.calModel
-        //     .GetMixer()
-        //     .ClearCycle(self.animationId[STATE_FANCY], delay);
-        // self.calModel.GetMixer().BlendCycle(
-        //     self.animationId[STATE_MOTION],
-        //     self.motionBlend[0],
-        //     delay,
-        // );
-        // self.calModel.GetMixer().BlendCycle(
-        //     self.animationId[STATE_MOTION + 1],
-        //     self.motionBlend[1],
-        //     delay,
-        // );
-        // self.calModel.GetMixer().BlendCycle(
-        //     self.animationId[STATE_MOTION + 2],
-        //     self.motionBlend[2],
-        //     delay,
-        // );
+        mixer.clearCycle(self.animationId[STATE_IDLE], delay);
+        mixer.clearCycle(self.animationId[STATE_FANCY], delay);
+        mixer.blendCycle(self.animationId[STATE_MOTION], self.motionBlend[0], delay);
+        mixer.blendCycle(
+            self.animationId[STATE_MOTION + 1],
+            self.motionBlend[1],
+            delay,
+        );
+        mixer.blendCycle(
+            self.animationId[STATE_MOTION + 2],
+            self.motionBlend[2],
+            delay,
+        );
 
         self.state = STATE_MOTION
     }
 
+    //----------------------------------------------------------------------------//
+    // Set a new animation state within a given delay                             //
+    //----------------------------------------------------------------------------//
     pub fn setState(&mut self, state: usize, delay: f32) {
-        todo!();
+        // todo!();
         // check if this is really a new state
-        // if state != self.state {
-        //     if state == STATE_IDLE {
-        //         self.calModel
-        //             .GetMixer()
-        //             .BlendCycle(self.animationId[STATE_IDLE], 1.0, delay);
-        //         self.calModel
-        //             .GetMixer()
-        //             .ClearCycle(self.animationId[STATE_FANCY], delay);
-        //         self.calModel
-        //             .GetMixer()
-        //             .ClearCycle(self.animationId[STATE_MOTION], delay);
-        //         self.calModel
-        //             .GetMixer()
-        //             .ClearCycle(self.animationId[STATE_MOTION + 1], delay);
-        //         self.calModel
-        //             .GetMixer()
-        //             .ClearCycle(self.animationId[STATE_MOTION + 2], delay);
-        //         self.state = STATE_IDLE
-        //     } else if state == STATE_FANCY {
-        //         self.calModel
-        //             .GetMixer()
-        //             .ClearCycle(self.animationId[STATE_IDLE], delay);
-        //         self.calModel
-        //             .GetMixer()
-        //             .BlendCycle(self.animationId[STATE_FANCY], 1.0, delay);
-        //         self.calModel
-        //             .GetMixer()
-        //             .ClearCycle(self.animationId[STATE_MOTION], delay);
-        //         self.calModel
-        //             .GetMixer()
-        //             .ClearCycle(self.animationId[STATE_MOTION + 1], delay);
-        //         self.calModel
-        //             .GetMixer()
-        //             .ClearCycle(self.animationId[STATE_MOTION + 2], delay);
-        //         self.state = STATE_FANCY
-        //     } else if state == STATE_MOTION {
-        //         self.calModel
-        //             .GetMixer()
-        //             .ClearCycle(self.animationId[STATE_IDLE], delay);
-        //         self.calModel
-        //             .GetMixer()
-        //             .ClearCycle(self.animationId[STATE_FANCY], delay);
-        //         self.calModel.GetMixer().BlendCycle(
-        //             self.animationId[STATE_MOTION],
-        //             self.motionBlend[0],
-        //             delay,
-        //         );
-        //         self.calModel.GetMixer().BlendCycle(
-        //             self.animationId[STATE_MOTION + 1],
-        //             self.motionBlend[1],
-        //             delay,
-        //         );
-        //         self.calModel.GetMixer().BlendCycle(
-        //             self.animationId[STATE_MOTION + 2],
-        //             self.motionBlend[2],
-        //             delay,
-        //         );
-        //         self.state = STATE_MOTION
-        //     }
-        // }
+        let Some(mut cal_model) = self.calModel.as_ref().map(|m| m.borrow_mut()) else {
+            panic!("Unable to get CalModel");
+            return;
+        };
+        let mixer = cal_model.getMixerMut().expect("CalModel has no mixer");
+        if state != self.state {
+            if state == STATE_IDLE {
+                mixer.blendCycle(self.animationId[STATE_IDLE], 1.0, delay);
+                mixer.clearCycle(self.animationId[STATE_FANCY], delay);
+                mixer.clearCycle(self.animationId[STATE_MOTION], delay);
+                mixer.clearCycle(self.animationId[STATE_MOTION + 1], delay);
+                mixer.clearCycle(self.animationId[STATE_MOTION + 2], delay);
+                self.state = STATE_IDLE
+            } else if state == STATE_FANCY {
+                mixer.clearCycle(self.animationId[STATE_IDLE], delay);
+                mixer.blendCycle(self.animationId[STATE_FANCY], 1.0, delay);
+                mixer.clearCycle(self.animationId[STATE_MOTION], delay);
+                mixer.clearCycle(self.animationId[STATE_MOTION + 1], delay);
+                mixer.clearCycle(self.animationId[STATE_MOTION + 2], delay);
+                self.state = STATE_FANCY
+            } else if state == STATE_MOTION {
+                mixer.clearCycle(self.animationId[STATE_IDLE], delay);
+                mixer.clearCycle(self.animationId[STATE_FANCY], delay);
+                mixer.blendCycle(self.animationId[STATE_MOTION], self.motionBlend[0], delay);
+                mixer.blendCycle(
+                    self.animationId[STATE_MOTION + 1],
+                    self.motionBlend[1],
+                    delay,
+                );
+                mixer.blendCycle(
+                    self.animationId[STATE_MOTION + 2],
+                    self.motionBlend[2],
+                    delay,
+                );
+                self.state = STATE_MOTION
+            }
+        }
         self.state = state;
     }
 }

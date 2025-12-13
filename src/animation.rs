@@ -279,6 +279,10 @@ impl CalAnimationCycle {
         self.m_time = time;
     }
 
+    pub fn setTimeFactor(&mut self, factor: f32) {
+        self.m_timeFactor = factor;
+    }
+
     pub fn setWeight(&mut self, weight: f32) {
         self.m_weight = weight;
     }
@@ -288,6 +292,34 @@ impl CalAnimationCycle {
         self.m_targetDelay = delay;
 
         return true;
+    }
+
+    // 63 cpp
+    /*****************************************************************************/
+    /** Puts the animation cycle instance into async state.
+     *
+     * This function puts the animation cycle instance into async state, which
+     * means that it will end after the current running cycle.
+     *
+     * @param time The time in seconds at which the animation cycle instance was
+     *             unlinked from the global mixer animation cycle.
+     * @param duration The current duration of the global mixer animation cycle in
+     *                 seconds at the time of the unlinking.
+     *****************************************************************************/
+    pub fn setAsync(&mut self, time: f32, duration: f32) {
+        // check if thie animation cycle is already async
+        if !matches!(self.getState(), State::STATE_ASYNC) {
+            if duration == 0.0 {
+                self.setTimeFactor(1.0);
+                self.setTime(0.0);
+            } else {
+                let core_duration = self.getCoreAnimation().borrow().getDuration();
+                self.setTimeFactor(core_duration / duration);
+                self.setTime(time * self.getTimeFactor());
+            }
+
+            self.setState(&State::STATE_ASYNC);
+        }
     }
 
     // 95 cpp
