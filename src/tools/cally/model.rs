@@ -1,6 +1,7 @@
 use super::graphics::get_texture;
 use cal3d::{CalMixer, CalModel};
 use cgmath::Matrix4;
+use std::ops::Deref;
 use std::path::PathBuf;
 use std::{cell::RefCell, rc::Rc};
 
@@ -234,12 +235,28 @@ impl Model {
 
         let cal_model = Rc::new(RefCell::new(cal_model));
         let mut cal_mixer = CalMixer::new(cal_model.clone());
+        let core_model = self.calCoreModel.borrow();
 
         // set initial animation state
         self.state = STATE_MOTION;
-        cal_mixer.blendCycle(self.animationId[STATE_MOTION], self.motionBlend[0], 0.0);
-        cal_mixer.blendCycle(self.animationId[STATE_MOTION + 1], self.motionBlend[1], 0.0);
-        cal_mixer.blendCycle(self.animationId[STATE_MOTION + 2], self.motionBlend[2], 0.0);
+        cal_mixer.blendCycle(
+            core_model.deref(),
+            self.animationId[STATE_MOTION],
+            self.motionBlend[0],
+            0.0,
+        );
+        cal_mixer.blendCycle(
+            core_model.deref(),
+            self.animationId[STATE_MOTION + 1],
+            self.motionBlend[1],
+            0.0,
+        );
+        cal_mixer.blendCycle(
+            core_model.deref(),
+            self.animationId[STATE_MOTION + 2],
+            self.motionBlend[2],
+            0.0,
+        );
 
         // Delay setting mixer on CalModel until after borrows above, as CalModel is borrowed in blendCycle
         cal_model.borrow_mut().set_mixer(cal_mixer);
@@ -287,17 +304,30 @@ impl Model {
             panic!("Unable to get CalModel");
             return;
         };
+
+        // FIXME Use self.calCoreModel instead?
+        // let core_model_ref = cal_model.getCoreModel().clone();
+        // let core_model = core_model_ref.borrow();
+        let core_model = self.calCoreModel.borrow();
+
         let mixer = cal_model.getMixerMut().expect("CalModel has no mixer");
 
         mixer.clearCycle(self.animationId[STATE_IDLE], delay);
         mixer.clearCycle(self.animationId[STATE_FANCY], delay);
-        mixer.blendCycle(self.animationId[STATE_MOTION], self.motionBlend[0], delay);
         mixer.blendCycle(
+            core_model.deref(),
+            self.animationId[STATE_MOTION],
+            self.motionBlend[0],
+            delay,
+        );
+        mixer.blendCycle(
+            core_model.deref(),
             self.animationId[STATE_MOTION + 1],
             self.motionBlend[1],
             delay,
         );
         mixer.blendCycle(
+            core_model.deref(),
             self.animationId[STATE_MOTION + 2],
             self.motionBlend[2],
             delay,
@@ -316,10 +346,12 @@ impl Model {
             panic!("Unable to get CalModel");
             return;
         };
+
+        let core_model = self.calCoreModel.borrow();
         let mixer = cal_model.getMixerMut().expect("CalModel has no mixer");
         if state != self.state {
             if state == STATE_IDLE {
-                mixer.blendCycle(self.animationId[STATE_IDLE], 1.0, delay);
+                mixer.blendCycle(core_model.deref(), self.animationId[STATE_IDLE], 1.0, delay);
                 mixer.clearCycle(self.animationId[STATE_FANCY], delay);
                 mixer.clearCycle(self.animationId[STATE_MOTION], delay);
                 mixer.clearCycle(self.animationId[STATE_MOTION + 1], delay);
@@ -327,7 +359,12 @@ impl Model {
                 self.state = STATE_IDLE
             } else if state == STATE_FANCY {
                 mixer.clearCycle(self.animationId[STATE_IDLE], delay);
-                mixer.blendCycle(self.animationId[STATE_FANCY], 1.0, delay);
+                mixer.blendCycle(
+                    core_model.deref(),
+                    self.animationId[STATE_FANCY],
+                    1.0,
+                    delay,
+                );
                 mixer.clearCycle(self.animationId[STATE_MOTION], delay);
                 mixer.clearCycle(self.animationId[STATE_MOTION + 1], delay);
                 mixer.clearCycle(self.animationId[STATE_MOTION + 2], delay);
@@ -335,13 +372,20 @@ impl Model {
             } else if state == STATE_MOTION {
                 mixer.clearCycle(self.animationId[STATE_IDLE], delay);
                 mixer.clearCycle(self.animationId[STATE_FANCY], delay);
-                mixer.blendCycle(self.animationId[STATE_MOTION], self.motionBlend[0], delay);
                 mixer.blendCycle(
+                    core_model.deref(),
+                    self.animationId[STATE_MOTION],
+                    self.motionBlend[0],
+                    delay,
+                );
+                mixer.blendCycle(
+                    core_model.deref(),
                     self.animationId[STATE_MOTION + 1],
                     self.motionBlend[1],
                     delay,
                 );
                 mixer.blendCycle(
+                    core_model.deref(),
                     self.animationId[STATE_MOTION + 2],
                     self.motionBlend[2],
                     delay,

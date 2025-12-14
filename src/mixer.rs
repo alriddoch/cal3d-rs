@@ -1,5 +1,5 @@
 use crate::animation::CompositionFunction;
-use crate::core::{CalCoreAnimation, CalCoreKeyframe};
+use crate::core::{CalCoreAnimation, CalCoreKeyframe, CalCoreModel};
 use crate::{CalAnimation, CalAnimationAction, CalAnimationCycle};
 use crate::{CalModel, CalSkeleton};
 use crate::{CalQuaternion, CalVector};
@@ -165,63 +165,63 @@ impl CalMixer {
     }
 
     // 599 cpp
-    pub fn blendCycle(&mut self, id: usize, weight: f32, delay: f32) -> bool {
+    pub fn blendCycle(
+        &mut self,
+        core_model: &CalCoreModel,
+        id: usize,
+        weight: f32,
+        delay: f32,
+    ) -> bool {
         // get the animation for the given id, with range check
         let Some(pAnimation) = self.m_vectorAnimation.get(id) else {
             return false;
         };
 
         // create a new animation instance if it is not active yet
-        if matches!(pAnimation, CalAnimation::None) {
-            // take the fast way out if we are trying to clear an inactive animation
-            if weight == 0.0 {
-                return true;
+        match pAnimation {
+            CalAnimation::None => {
+                // take the fast way out if we are trying to clear an inactive animation
+                if weight == 0.0 {
+                    return true;
+                }
+
+                // These need to be borrowed for the lifetime of pCoreAnimation below
+
+                // get the core animation
+                let Some(pCoreAnimation) = core_model.getCoreAnimation(id) else {
+                    return false;
+                };
+
+                // Ensure that the animation's first and last key frame match for proper
+                // looping.
+                addExtraKeyframeForLoopedAnim(&pCoreAnimation.borrow());
+
+                // allocate a new animation cycle instance
+                let pAnimationCycle =
+                    Rc::new(RefCell::new(CalAnimationCycle::new(pCoreAnimation.clone())));
+
+                // insert new animation into the tables
+                self.m_vectorAnimation
+                    .insert(id, CalAnimation::Cycle(pAnimationCycle.clone()));
+                self.m_listAnimationCycle.push(pAnimationCycle.clone());
+
+                // blend the animation
+                pAnimationCycle.borrow_mut().blend(weight, delay)
             }
+            CalAnimation::Cycle(pAnimationCycle) => {
+                // blend the animation cycle
+                pAnimationCycle.borrow_mut().blend(weight, delay);
+                pAnimationCycle.borrow().checkCallbacks(0.0, &self.m_pModel);
 
-            // These need to be borrowed for the lifetime of pCoreAnimation below
-            let model_scope = self.m_pModel.borrow();
-            let core_model_scope = model_scope.getCoreModel().borrow();
+                // clear the animation cycle from the active vector if the target weight is zero
+                if weight == 0.0 {
+                    self.m_vectorAnimation.insert(id, CalAnimation::None);
+                }
 
-            // get the core animation
-            let Some(pCoreAnimation) = core_model_scope.getCoreAnimation(id) else {
-                return false;
-            };
-
-            // Ensure that the animation's first and last key frame match for proper
-            // looping.
-            addExtraKeyframeForLoopedAnim(&pCoreAnimation.borrow());
-
-            // allocate a new animation cycle instance
-            let pAnimationCycle =
-                Rc::new(RefCell::new(CalAnimationCycle::new(pCoreAnimation.clone())));
-
-            drop(core_model_scope);
-            drop(model_scope);
-
-            // insert new animation into the tables
-            self.m_vectorAnimation
-                .insert(id, CalAnimation::Cycle(pAnimationCycle.clone()));
-            self.m_listAnimationCycle.push(pAnimationCycle.clone());
-
-            // blend the animation
-            return pAnimationCycle.borrow_mut().blend(weight, delay);
+                true
+            }
+            _ => false,
         }
-
-        // check if this is really a animation cycle instance
-        let CalAnimation::Cycle(pAnimationCycle) = pAnimation else {
-            return false;
-        };
-
-        // blend the animation cycle
-        pAnimationCycle.borrow_mut().blend(weight, delay);
-        pAnimationCycle.borrow().checkCallbacks(0.0, &self.m_pModel);
-
-        // clear the animation cycle from the active vector if the target weight is zero
-        if weight == 0.0 {
-            self.m_vectorAnimation.insert(id, CalAnimation::None);
-        }
-
-        return true;
     }
 
     // 679 cpp
