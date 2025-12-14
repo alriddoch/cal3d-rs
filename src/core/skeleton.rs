@@ -2,7 +2,6 @@ use std::cell::RefCell;
 use std::collections::BTreeMap;
 use std::rc::Rc;
 
-use super::CalCoreModel;
 use super::bone::CalCoreBone;
 
 #[derive(Default)]

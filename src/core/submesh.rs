@@ -210,9 +210,9 @@ impl CalCoreSubmesh {
         let du2 = vtex[v2].u - vtex[v0].u;
         let dv2 = vtex[v2].v - vtex[v0].v;
 
-        let prod1 = (du1 * dv2 - dv1 * du2);
-        let prod2 = (du2 * dv1 - dv2 * du1);
-        if (((prod1.abs()) < 0.000001) || ((prod2.abs()) < 0.000001)) {
+        let prod1 = du1 * dv2 - dv1 * du2;
+        let prod2 = du2 * dv1 - dv2 * du1;
+        if ((prod1.abs()) < 0.000001) || ((prod2.abs()) < 0.000001) {
             return;
         }
 
@@ -239,13 +239,13 @@ impl CalCoreSubmesh {
      * This function enables or disables the storage of tangent space bases.
      *****************************************************************************/
     pub fn enableTangents(&mut self, mapId: usize, enabled: bool) -> bool {
-        if (mapId < 0) || (mapId >= self.m_vectorTangentsEnabled.len()) {
+        if mapId >= self.m_vectorTangentsEnabled.len() {
             return false;
         }
 
         self.m_vectorTangentsEnabled[mapId] = enabled;
 
-        if (!enabled) {
+        if !enabled {
             self.m_vectorvectorTangentSpace[mapId].clear();
             return true;
         }
@@ -308,7 +308,7 @@ impl CalCoreSubmesh {
      *         \li \b false if an error happened
      *****************************************************************************/
     pub fn setFace(&mut self, faceId: usize, face: Face) -> bool {
-        if (faceId < 0) || (faceId >= self.m_vectorFace.len()) {
+        if faceId >= self.m_vectorFace.len() {
             return false;
         }
 
@@ -336,7 +336,7 @@ impl CalCoreSubmesh {
         vertexId: usize,
         physicalProperty: PhysicalProperty,
     ) -> bool {
-        if (vertexId < 0) || (vertexId >= self.m_vectorPhysicalProperty.len()) {
+        if vertexId >= self.m_vectorPhysicalProperty.len() {
             return false;
         }
 
@@ -358,7 +358,7 @@ impl CalCoreSubmesh {
      *         \li \b false if an error happened
      *****************************************************************************/
     pub fn setSpring(&mut self, springId: usize, spring: Spring) -> bool {
-        if (springId < 0) || (springId >= self.m_vectorSpring.len()) {
+        if springId >= self.m_vectorSpring.len() {
             return false;
         }
 
@@ -388,14 +388,10 @@ impl CalCoreSubmesh {
         textureCoordinateId: usize,
         textureCoordinate: TextureCoordinate,
     ) -> bool {
-        if (textureCoordinateId < 0)
-            || (textureCoordinateId >= self.m_vectorvectorTextureCoordinate.len())
-        {
+        if textureCoordinateId >= self.m_vectorvectorTextureCoordinate.len() {
             return false;
         }
-        if (vertexId < 0)
-            || (vertexId >= self.m_vectorvectorTextureCoordinate[textureCoordinateId].len())
-        {
+        if vertexId >= self.m_vectorvectorTextureCoordinate[textureCoordinateId].len() {
             return false;
         }
 
