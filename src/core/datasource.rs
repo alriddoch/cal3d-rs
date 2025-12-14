@@ -1,6 +1,6 @@
 use std::string::FromUtf8Error;
 
-use crate::{CalQuaternion, CalVector};
+use crate::CalVector;
 
 pub(crate) const maxStringLength: i32 = 128;
 

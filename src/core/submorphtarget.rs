@@ -57,7 +57,9 @@ impl CalCoreSubMorphTarget {
         }
     }
 
-    pub fn setMorphID(&mut self, i: usize){ self.m_morphTargetID = i; }
+    pub fn setMorphID(&mut self, i: usize) {
+        self.m_morphTargetID = i;
+    }
 
     //120
     /*****************************************************************************/
@@ -73,7 +75,7 @@ impl CalCoreSubMorphTarget {
      *         \li \b false if an error happened
      *****************************************************************************/
     pub fn setBlendVertex(&mut self, blendVertexId: usize, blendVertex: &BlendVertex) -> bool {
-        if (blendVertexId < 0) || (blendVertexId >= self.m_vectorBlendVertex.len()) {
+        if blendVertexId >= self.m_vectorBlendVertex.len() {
             return false;
         }
 

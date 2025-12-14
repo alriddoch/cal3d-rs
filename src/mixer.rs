@@ -185,8 +185,6 @@ impl CalMixer {
                     return true;
                 }
 
-                // These need to be borrowed for the lifetime of pCoreAnimation below
-
                 // get the core animation
                 let Some(pCoreAnimation) = core_model.getCoreAnimation(id) else {
                     return false;

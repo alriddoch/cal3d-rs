@@ -40,16 +40,18 @@ impl CalCoreSkeleton {
     pub fn addCoreBone(&mut self, bone: Rc<RefCell<CalCoreBone>>) -> usize {
         let boneId = self.m_vectorCoreBone.len();
 
+        let name = bone.borrow().getName().to_string();
+
         // if necessary, add the core bone to the root bone list
         if bone.borrow().getParentId() == -1 {
             self.m_vectorRootCoreBoneId.push(boneId);
         }
 
-        // add a reference from the bone's name to its id
-        self.mapCoreBoneName(boneId, bone.borrow().getName());
-
-        // Delayed, as the bone is moved
         self.m_vectorCoreBone.push(bone);
+
+        // add a reference from the bone's name to its id
+        self.mapCoreBoneName(boneId, name)
+            .expect("boneId out of range");
 
         return boneId;
     }
@@ -88,10 +90,10 @@ impl CalCoreSkeleton {
     pub fn mapCoreBoneName(
         &mut self,
         coreBoneId: usize,
-        strName: &str,
+        strName: String,
     ) -> Result<(), super::CoreError> {
         //Make sure the ID given is a valid corebone ID number
-        if (coreBoneId < 0) || (coreBoneId >= self.m_vectorCoreBone.len()) {
+        if coreBoneId >= self.m_vectorCoreBone.len() {
             return Err(super::CoreError::OtherError(format!(
                 "Bone id {coreBoneId} outside range 0..{}",
                 self.m_vectorCoreBone.len()
@@ -99,8 +101,7 @@ impl CalCoreSkeleton {
         }
 
         //Add the mapping or overwrite an existing mapping
-        self.m_mapCoreBoneNames
-            .insert(strName.to_string(), coreBoneId);
+        self.m_mapCoreBoneNames.insert(strName, coreBoneId);
 
         Ok(())
     }

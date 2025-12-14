@@ -2,8 +2,8 @@ use super::skeleton::CalCoreSkeleton;
 use crate::vector::bounding::BoundingBox;
 use crate::{CalQuaternion, CalVector};
 use std::cell::RefCell;
+use std::ops::Mul;
 use std::rc::Rc;
-use std::{default, ops::Mul};
 
 pub enum CalLightType {
     LIGHT_TYPE_NONE,

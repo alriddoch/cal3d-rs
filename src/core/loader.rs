@@ -157,7 +157,7 @@ pub fn loadCoreMaterial(filename: &PathBuf) -> Result<CalCoreMaterial, LoaderErr
         return xmlformat::loadXmlCoreMaterial(filename);
     }
 
-    let mut buff_reader = BufReader::new(fs::File::open(filename)?);
+    let buff_reader = BufReader::new(fs::File::open(filename)?);
 
     let mut source = BufReaderSource::new(buff_reader);
 
@@ -191,7 +191,7 @@ pub fn loadCoreMesh(filename: &PathBuf) -> Result<Rc<RefCell<CalCoreMesh>>, Load
         // loadXmlCoreMesh(strFilename);
     }
 
-    let mut buff_reader = BufReader::new(fs::File::open(filename)?);
+    let buff_reader = BufReader::new(fs::File::open(filename)?);
 
     let mut source = BufReaderSource::new(buff_reader);
 
@@ -227,7 +227,7 @@ pub fn loadCoreSkeleton(
         todo!();
     }
 
-    let mut buff_reader = BufReader::new(fs::File::open(filename)?);
+    let buff_reader = BufReader::new(fs::File::open(filename)?);
 
     let mut source = BufReaderSource::new(buff_reader);
 
@@ -301,9 +301,9 @@ pub fn loadCoreAnimationFromSource(
     }
 
     // read flags
-    let mut flags = 0;
+    let mut _flags = 0;
     if version >= LIBRARY_VERSION {
-        flags = dataSrc.readInteger()?;
+        _flags = dataSrc.readInteger()?;
     }
 
     // load all core bones
@@ -485,10 +485,12 @@ fn loadCoreSkeletonFromSource(
     for bone_id in 0..bone_count as usize {
         let bone = loadCoreBones(dataSrc, version, skel.clone())?;
 
-        skeleton.addCoreBone(bone.clone());
+        let name = bone.borrow().getName().to_string();
+
+        skeleton.addCoreBone(bone);
 
         // FIXME: This seems redundant, as it's called from within addCoreBone above.
-        skeleton.mapCoreBoneName(bone_id, bone.borrow().getName())?;
+        skeleton.mapCoreBoneName(bone_id, name)?;
     }
 
     skeleton.calculateState();
@@ -511,7 +513,7 @@ fn loadCoreBones(
     version: i32,
     skeleton: Rc<RefCell<CalCoreSkeleton>>,
 ) -> Result<Rc<RefCell<CalCoreBone>>, LoaderError> {
-    let hasNodeLights = (version >= FIRST_FILE_VERSION_WITH_NODE_LIGHTS);
+    let hasNodeLights = version >= FIRST_FILE_VERSION_WITH_NODE_LIGHTS;
 
     //   if !dataSrc.ok()  {
     //     dataSrc.setError();
@@ -621,7 +623,7 @@ fn loadCoreBones(
 
 //1158
 fn usesAnimationCompression(version: i32) -> bool {
-    (version >= FIRST_FILE_VERSION_WITH_ANIMATION_COMPRESSION)
+    version >= FIRST_FILE_VERSION_WITH_ANIMATION_COMPRESSION
 }
 
 //1191
@@ -746,9 +748,9 @@ fn loadCoreSubmesh(
     use super::submorphtarget::BlendVertex;
     use std::mem;
 
-    let hasVertexColors = (version >= FIRST_FILE_VERSION_WITH_VERTEX_COLORS);
+    let hasVertexColors = version >= FIRST_FILE_VERSION_WITH_VERTEX_COLORS;
     let hasMorphTargetsInMorphFiles =
-        (version >= FIRST_FILE_VERSION_WITH_MORPH_TARGETS_IN_MORPH_FILES);
+        version >= FIRST_FILE_VERSION_WITH_MORPH_TARGETS_IN_MORPH_FILES;
 
     // get the material thread id of the submesh
     let coreMaterialThreadId = dataSrc.readInteger()?;
@@ -771,7 +773,7 @@ fn loadCoreSubmesh(
     }
 
     // allocate a new core submesh instance
-    let mut pCoreSubmesh = CalCoreSubmesh::new(
+    let pCoreSubmesh = CalCoreSubmesh::new(
         coreMaterialThreadId,
         lodCount,
         vertexCount,
@@ -780,9 +782,9 @@ fn loadCoreSubmesh(
         springCount,
     );
 
-    let CoreSubmesh = Rc::new(RefCell::new(pCoreSubmesh));
+    let coreSubmesh = Rc::new(RefCell::new(pCoreSubmesh));
 
-    let mut pCoreSubmesh = CoreSubmesh.borrow_mut();
+    let mut pCoreSubmesh = coreSubmesh.borrow_mut();
 
     // reserve memory for all the submesh data
     // This is done insize ::new() in the Rust implementation
@@ -906,7 +908,7 @@ fn loadCoreSubmesh(
         // morphTarget.setName(morphName);
 
         let mut morphTarget =
-            CalCoreSubMorphTarget::new(CoreSubmesh.clone(), vertexCount, morphName);
+            CalCoreSubMorphTarget::new(coreSubmesh.clone(), vertexCount, morphName);
 
         let mut cpt = 0;
         let nbBlendVertex = dataSrc.readInteger()?;
@@ -962,7 +964,7 @@ fn loadCoreSubmesh(
         tmp[2] = dataSrc.readInteger()?;
 
         if mem::size_of::<crate::CalIndex>() == 2 {
-            if (tmp[0] > 65535 || tmp[1] > 65535 || tmp[2] > 65535) {
+            if tmp[0] > 65535 || tmp[1] > 65535 || tmp[2] > 65535 {
                 return Err(LoaderError::FormatError(format!(
                     "Invalid index in mesh face {faceId}: [{},{},{}]",
                     tmp[0], tmp[1], tmp[2]
@@ -1027,7 +1029,7 @@ fn loadCoreSubmesh(
     // Must be dropped before we return the value it refers to.
     drop(pCoreSubmesh);
 
-    Ok(CoreSubmesh)
+    Ok(coreSubmesh)
 }
 
 //2051
