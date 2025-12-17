@@ -214,6 +214,7 @@ o----------------------------------------------------------------o"
             .collect::<PathBuf>();
 
         self.cursor.WithSpriteFile(&strFilename).Setup()?;
+        self.sr.as_ref().borrow().bind(&self.cursor);
 
         // load the logo texture
         let strFilename = [self.strDatapath.as_str(), "logo.raw"]
@@ -221,6 +222,7 @@ o----------------------------------------------------------------o"
             .collect::<PathBuf>();
 
         self.logo.WithSpriteFile(&strFilename).Setup()?;
+        self.sr.as_ref().borrow().bind(&self.logo);
 
         // load the fps texture
         let strFilename = [self.strDatapath.as_str(), "fps.raw"]
@@ -489,6 +491,15 @@ Quit the demo by pressing 'q' or ESC
 
         self.theMenu.borrow().onRender();
 
+        let sr = self.sr.as_ref().borrow();
+
+        sr.set_state();
+
+        sr.set_sprite(&self.logo);
+
+        let mview = Matrix4::<f32>::identity();
+        sr.draw(&mview);
+        sr.reset_state();
         // TODO: more stuff
 
         // unimplemented!();
