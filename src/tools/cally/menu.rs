@@ -227,12 +227,25 @@ impl Menu {
             sr.draw(&mview);
         }
 
-        sr.reset_state();
-
         // Render lod
 
-        let models = self.theModels.as_ref().unwrap().borrow();
+        let mview = Matrix4::<f32>::identity().mul(Matrix4::from_translation(Vector3 {
+            x: self.lodX as f32,
+            y: self.lodY as f32,
+            z: 0.0,
+        }));
+
+        sr.set_sprite(&self.lod);
+        self.lod.set_area(0, 0, 256, 32, 0, 0);
+
+        sr.draw(&mview);
+
+        // TODO: Draw the slider
+
+        sr.reset_state();
+
         // Render motion triangle
+        let models = self.theModels.as_ref().unwrap().borrow();
         let motionBlend = models.getMotionBlend();
 
         // calculate the current motion point

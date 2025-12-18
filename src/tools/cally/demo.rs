@@ -499,10 +499,23 @@ Quit the demo by pressing 'q' or ESC
 
         let mview = Matrix4::<f32>::identity();
         sr.draw(&mview);
-        sr.reset_state();
-        // TODO: more stuff
 
-        // unimplemented!();
+        sr.set_sprite(&self.cursor);
+
+        let controls = self.controls.borrow();
+
+        let mview = Matrix4::<f32>::identity().mul(Matrix4::from_translation(Vector3 {
+            x: controls.mouseX as f32,
+            y: (controls.mouseY - 32) as f32,
+            z: 0.0,
+        }));
+
+        sr.draw(&mview);
+
+        sr.reset_state();
+
+        // TODO: more stuff
+        // e.g. Draw text for fps
     }
 
     fn setDimension(&self, width: u32, height: u32) {
