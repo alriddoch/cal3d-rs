@@ -227,6 +227,10 @@ impl Menu {
             sr.draw(&mview);
         }
 
+        let models = self.theModels.as_ref().unwrap().borrow();
+        let motionBlend = models.getMotionBlend();
+        let lodLevel = models.getLodLevel();
+
         // Render lod
 
         let mview = Matrix4::<f32>::identity().mul(Matrix4::from_translation(Vector3 {
@@ -240,13 +244,15 @@ impl Menu {
 
         sr.draw(&mview);
 
-        // TODO: Draw the slider
+        let slider_x = 247 - (lodLevel * 200.0) as u32;
+
+        self.lod.set_area(slider_x, 0, 256 - slider_x, 32, 0, 32);
+
+        sr.draw(&mview);
 
         sr.reset_state();
 
         // Render motion triangle
-        let models = self.theModels.as_ref().unwrap().borrow();
-        let motionBlend = models.getMotionBlend();
 
         // calculate the current motion point
         let motionX = (motionBlend[0] * MENUITEM_MOTION_X[0] as f32

@@ -133,6 +133,7 @@ impl Sprite {
         let (fx, fy, fw, fh) = (x as f32, y as f32, w as f32, h as f32);
         let (sw, sh) = (self.w as f32, self.h as f32);
         let fxo = xoff as f32;
+        let fyo = yoff as f32;
 
         let vertices: [f32; 16] = [
             fx,
@@ -144,13 +145,13 @@ impl Sprite {
             fx + fw,
             fy + fh,
             (fx + fxo) / sw,
-            (sh - fy) / sh,
+            (sh - fy - fyo) / sh,
             (fx + fxo + fw) / sw,
-            (sh - fy) / sh,
+            (sh - fy - fyo) / sh,
             (fx + fxo) / sw,
-            (sh - fy - fh) / sh,
+            (sh - fy - fh - fyo) / sh,
             (fx + fxo + fw) / sw,
-            (sh - fy - fh) / sh,
+            (sh - fy - fh - fyo) / sh,
         ];
         unsafe {
             gl::BufferData(

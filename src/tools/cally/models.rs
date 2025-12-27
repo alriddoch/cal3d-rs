@@ -94,6 +94,10 @@ impl Models {
         &self.vectorModel[self.currentModel].motionBlend
     }
 
+    pub fn getLodLevel(&self) -> f32 {
+        self.vectorModel[self.currentModel].lodLevel
+    }
+
     pub fn setMotionBlend(&mut self, blend: [f32; 3], delay: f32) {
         self.vectorModel[self.currentModel].setMotionBlend(blend, delay);
     }
