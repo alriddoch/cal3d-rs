@@ -1,5 +1,5 @@
 use super::graphics::get_texture;
-use cal3d::{CalMixer, CalModel};
+use cal3d::{CalMixer, CalModel, CalMorphTargetMixer, CalPhysique, CalRenderer, CalSpringSystem};
 use cgmath::Matrix4;
 use std::ops::Deref;
 use std::path::PathBuf;
@@ -260,6 +260,18 @@ impl Model {
 
         // Delay setting mixer on CalModel until after borrows above, as CalModel is borrowed in blendCycle
         cal_model.borrow_mut().set_mixer(cal_mixer);
+        cal_model
+            .borrow_mut()
+            .set_morph_target(CalMorphTargetMixer::new(cal_model.clone()));
+        cal_model
+            .borrow_mut()
+            .set_physique(CalPhysique::new(cal_model.clone()));
+        cal_model
+            .borrow_mut()
+            .set_spring_system(CalSpringSystem::new(cal_model.clone()));
+        cal_model
+            .borrow_mut()
+            .set_renderer(CalRenderer::new(cal_model.clone()));
 
         self.calModel = Some(cal_model);
 

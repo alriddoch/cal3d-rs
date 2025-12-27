@@ -6,6 +6,10 @@ pub struct CalSpringSystem {
 }
 
 impl CalSpringSystem {
+    pub fn new(model: Rc<RefCell<CalModel>>) -> Self {
+        Self { m_pModel: model }
+    }
+
     pub fn update(&mut self, delta_time: f32) {
         todo!();
     }

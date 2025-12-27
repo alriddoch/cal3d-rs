@@ -22,6 +22,13 @@ pub struct CalMorphTargetMixer {
 }
 
 impl CalMorphTargetMixer {
+    pub fn new(model: Rc<RefCell<CalModel>>) -> Self {
+        Self {
+            mAnimList: Vec::new(),
+            m_pModel: model,
+        }
+    }
+
     pub fn update(&mut self, delta_time: f32) {
         todo!();
     }

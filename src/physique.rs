@@ -6,6 +6,10 @@ pub struct CalPhysique {
 }
 
 impl CalPhysique {
+    pub fn new(model: Rc<RefCell<CalModel>>) -> Self {
+        Self { m_pModel: model }
+    }
+
     pub fn update(&mut self) {
         todo!();
     }
